@@ -1,0 +1,31 @@
+{
+  "// Scope TS Language Server + file watchers to this project only.": "Prevents indexing the parent home directory, which has a stray package.json that confuses workspace resolution.",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.disableAutomaticTypeAcquisition": true,
+  "javascript.preferences.includePackageJsonAutoImports": "off",
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+
+  "search.useGlobalIgnoreFiles": true,
+  "search.useParentIgnoreFiles": false,
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/drizzle": true,
+    "**/local.db": true,
+    "**/local.db-*": true
+  },
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/drizzle/**": true
+  },
+  "files.exclude": {
+    "**/.next": true,
+    "**/local.db-journal": true,
+    "**/local.db-shm": true,
+    "**/local.db-wal": true
+  }
+}
