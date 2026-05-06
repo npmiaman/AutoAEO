@@ -9,9 +9,12 @@ export interface ProposedChange {
     | "robots_txt" // edit robots.txt.liquid
     | "page_create" // create a new Shopify Page
     | "page_update"
-    | "product_update" // bulk-update product fields
-    | "metafield_set"
-    | "snippet_inject"; // inject a snippet into theme.liquid head
+    | "product_update" // update product fields (description, title, etc.)
+    | "image_alt_update" // update a product image's alt text
+    | "metafield_set" // set a metafield on a resource (page, product, shop, etc.)
+    | "redirect_create" // create a URL redirect (fix for 404)
+    | "snippet_inject" // inject a snippet into theme.liquid head
+    | "audit_finding"; // informational: an issue surfaced by an audit, not auto-applicable
   target: string; // identifier (e.g. "templates/product.machine.json")
   title: string;
   description?: string;

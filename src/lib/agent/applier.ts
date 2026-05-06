@@ -10,11 +10,16 @@ import { createShopifyClient, type ShopifyClient } from "@/lib/shopify/client";
 import { fetchPublishedTheme } from "./playbooks/machine-layer/queries";
 import {
   createPage,
+  createUrlRedirect,
   deletePageById,
   deleteThemeAsset,
+  deleteUrlRedirect,
   findPageByHandle,
   putThemeAsset,
+  setMetafield,
+  updateImageAltText,
   updatePageById,
+  updateProduct,
 } from "@/lib/shopify/writes";
 
 interface ApplyError {
@@ -279,6 +284,53 @@ async function applyOne(
       return null;
     }
 
+    case "product_update": {
+      // target = product gid (gid://shopify/Product/123)
+      const payload = after as {
+        title?: string;
+        descriptionHtml?: string;
+        seoTitle?: string;
+        seoDescription?: string;
+      };
+      await updateProduct(shopify, target, payload);
+      return null;
+    }
+
+    case "image_alt_update": {
+      // target = "<productId>:<imageId>" (both can be gids or numeric)
+      const [productId, imageId] = target.split(":");
+      const payload = after as { altText: string };
+      await updateImageAltText(shopify, productId, imageId, payload.altText);
+      return null;
+    }
+
+    case "metafield_set": {
+      // target = "<ownerId>:<namespace>.<key>"
+      const [ownerId, namespacedKey] = target.split(":", 2);
+      const [namespace, key] = namespacedKey.split(".");
+      const payload = after as { type: string; value: string };
+      await setMetafield(shopify, {
+        ownerId,
+        namespace,
+        key,
+        type: payload.type,
+        value: payload.value,
+      });
+      return null;
+    }
+
+    case "redirect_create": {
+      // target = the from-path; after carries the to-path
+      const payload = after as { toPath: string };
+      const created = await createUrlRedirect(shopify, target, payload.toPath);
+      return { newRecordId: created.id };
+    }
+
+    case "audit_finding": {
+      // Informational; no action to take. Marked as applied immediately.
+      return null;
+    }
+
     default:
       throw new Error(`Unknown proposal kind: ${kind}`);
   }
@@ -326,6 +378,56 @@ async function rollbackOne(
           published: prior.published,
         });
       }
+      return;
+    }
+
+    case "product_update": {
+      // target = product gid; before holds the prior values to restore.
+      if (before && typeof before === "object") {
+        await updateProduct(shopify, target, before as Parameters<typeof updateProduct>[2]);
+      }
+      return;
+    }
+
+    case "image_alt_update": {
+      const [productId, imageId] = target.split(":");
+      const priorAlt =
+        before && typeof before === "object" && "altText" in before
+          ? (before as { altText: string }).altText
+          : "";
+      await updateImageAltText(shopify, productId, imageId, priorAlt);
+      return;
+    }
+
+    case "metafield_set": {
+      // Rolling back a metafield set: best-effort restore the prior value.
+      // If there was no prior value, leaving the metafield in place is safest
+      // (deleting metafields requires extra API calls and isn't always desirable).
+      if (before && typeof before === "object" && "value" in before) {
+        const [ownerId, namespacedKey] = target.split(":", 2);
+        const [namespace, key] = namespacedKey.split(".");
+        const prior = before as { type: string; value: string };
+        await setMetafield(shopify, {
+          ownerId,
+          namespace,
+          key,
+          type: prior.type,
+          value: prior.value,
+        });
+      }
+      return;
+    }
+
+    case "redirect_create": {
+      // We created a redirect; on rollback we delete it.
+      if (createdId != null) {
+        await deleteUrlRedirect(shopify, Number(createdId));
+      }
+      return;
+    }
+
+    case "audit_finding": {
+      // Nothing was applied; nothing to roll back.
       return;
     }
 

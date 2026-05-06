@@ -130,3 +130,162 @@ export async function findPageByHandle(
   const json = (await res.json()) as { pages: CreatedPage[] };
   return json.pages[0] ?? null;
 }
+
+// ─── Products ───────────────────────────────────────────────────────
+
+/**
+ * Update a product's title, descriptionHtml, or seo fields via GraphQL.
+ * `productId` should be the GraphQL global ID (gid://shopify/Product/...).
+ */
+export async function updateProduct(
+  client: ShopifyClient,
+  productId: string,
+  fields: {
+    title?: string;
+    descriptionHtml?: string;
+    seoTitle?: string;
+    seoDescription?: string;
+  },
+): Promise<void> {
+  const input: Record<string, unknown> = { id: productId };
+  if (fields.title !== undefined) input.title = fields.title;
+  if (fields.descriptionHtml !== undefined)
+    input.descriptionHtml = fields.descriptionHtml;
+  if (fields.seoTitle !== undefined || fields.seoDescription !== undefined) {
+    input.seo = {
+      title: fields.seoTitle,
+      description: fields.seoDescription,
+    };
+  }
+
+  const data = await client.graphql<{
+    productUpdate: { userErrors: Array<{ field: string[]; message: string }> };
+  }>(
+    /* GraphQL */ `
+      mutation AutoAEO_UpdateProduct($input: ProductInput!) {
+        productUpdate(input: $input) {
+          userErrors { field message }
+        }
+      }
+    `,
+    { input },
+  );
+  const errs = data.productUpdate.userErrors;
+  if (errs.length > 0) {
+    throw new Error(
+      `Product update failed: ${errs.map((e) => `${e.field?.join(".")}: ${e.message}`).join("; ")}`,
+    );
+  }
+}
+
+/**
+ * Update a product image's alt text. Uses the productImageUpdate mutation.
+ */
+export async function updateImageAltText(
+  client: ShopifyClient,
+  productId: string,
+  imageId: string,
+  altText: string,
+): Promise<void> {
+  // Strip the 'gid://shopify/...' prefix if present — REST endpoint expects numeric IDs.
+  const numericProductId = productId.split("/").pop();
+  const numericImageId = imageId.split("/").pop();
+  const res = await client.rest(
+    `/products/${numericProductId}/images/${numericImageId}.json`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        image: { id: Number(numericImageId), alt: altText },
+      }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(
+      `Image alt update failed (product ${numericProductId}, image ${numericImageId}): ${res.status} ${await res.text()}`,
+    );
+  }
+}
+
+// ─── Metafields ─────────────────────────────────────────────────────
+
+export interface MetafieldInput {
+  ownerId: string; // GraphQL global ID of the owner (Page, Product, Shop, etc.)
+  namespace: string;
+  key: string;
+  type: string; // e.g. "json", "single_line_text_field", "multi_line_text_field"
+  value: string;
+}
+
+/**
+ * Set a metafield on any resource. Used by FAQ Generator (autoaeo.faq json
+ * on Page) and for misc structured data we want bound to specific entities.
+ */
+export async function setMetafield(
+  client: ShopifyClient,
+  input: MetafieldInput,
+): Promise<void> {
+  const data = await client.graphql<{
+    metafieldsSet: {
+      userErrors: Array<{ field: string[]; message: string }>;
+    };
+  }>(
+    /* GraphQL */ `
+      mutation AutoAEO_SetMetafield($metafields: [MetafieldsSetInput!]!) {
+        metafieldsSet(metafields: $metafields) {
+          userErrors { field message }
+        }
+      }
+    `,
+    {
+      metafields: [
+        {
+          ownerId: input.ownerId,
+          namespace: input.namespace,
+          key: input.key,
+          type: input.type,
+          value: input.value,
+        },
+      ],
+    },
+  );
+  const errs = data.metafieldsSet.userErrors;
+  if (errs.length > 0) {
+    throw new Error(
+      `Metafield set failed: ${errs.map((e) => `${e.field?.join(".")}: ${e.message}`).join("; ")}`,
+    );
+  }
+}
+
+// ─── URL Redirects ──────────────────────────────────────────────────
+
+export async function createUrlRedirect(
+  client: ShopifyClient,
+  fromPath: string,
+  toPath: string,
+): Promise<{ id: number }> {
+  const res = await client.rest("/redirects.json", {
+    method: "POST",
+    body: JSON.stringify({
+      redirect: { path: fromPath, target: toPath },
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(
+      `Redirect create '${fromPath}' → '${toPath}' failed: ${res.status} ${await res.text()}`,
+    );
+  }
+  const json = (await res.json()) as { redirect: { id: number } };
+  return json.redirect;
+}
+
+export async function deleteUrlRedirect(
+  client: ShopifyClient,
+  redirectId: number,
+): Promise<void> {
+  const res = await client.rest(`/redirects/${redirectId}.json`, {
+    method: "DELETE",
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Redirect delete ${redirectId} failed: ${res.status}`);
+  }
+}
