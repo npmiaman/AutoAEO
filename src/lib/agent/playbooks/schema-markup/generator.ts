@@ -142,6 +142,9 @@ export const AUTOAEO_SCHEMA_SNIPPET = `{%- comment -%}
       },
       "description": {{ article.excerpt_or_content | strip_html | truncate: 3000 | json }}
     }
+    {%- if article.metafields.autoaeo.schema_extra -%}
+    ,{{ article.metafields.autoaeo.schema_extra.value }}
+    {%- endif -%}
     {%- endif -%}
 
     {%- if template contains 'page' and page -%}
@@ -159,6 +162,13 @@ export const AUTOAEO_SCHEMA_SNIPPET = `{%- comment -%}
       "mainEntity": {{ page.metafields.autoaeo.faq.value }}
     }
     {%- endif -%}
+    {%- if page.metafields.autoaeo.schema_extra -%}
+    ,{{ page.metafields.autoaeo.schema_extra.value }}
+    {%- endif -%}
+    {%- endif -%}
+
+    {%- if template contains 'product' and product and product.metafields.autoaeo.schema_extra -%}
+    ,{{ product.metafields.autoaeo.schema_extra.value }}
     {%- endif -%}
   ]
 }
