@@ -1,14 +1,6 @@
 import "server-only";
 import type { Playbook, ProposedChange } from "@/lib/agent/types";
-import {
-  fetchArticles,
-  fetchCollections,
-  fetchPages,
-  fetchProducts,
-  fetchPublishedTheme,
-  fetchShopInfo,
-  fetchThemeAssetText,
-} from "@/lib/agent/playbooks/machine-layer/queries";
+import { fetchThemeAssetText } from "@/lib/agent/playbooks/machine-layer/queries";
 import {
   generateLlmsFullTxt,
   generateRobotsTxt,
@@ -19,52 +11,53 @@ import {
   machinePageSection,
   machineTemplateJson,
 } from "@/lib/agent/playbooks/machine-layer/generator";
-import { profileStore } from "./profile";
-import { generateProductSummaries } from "./content";
+import { runAdaptiveAgent } from "./graph";
 import { pickProductTemplate } from "./variants";
 
 /**
- * Adaptive Machine Layer — same artifacts as the basic Machine Layer
- * but with Claude in the loop:
+ * Adaptive Machine Layer — driven by a LangGraph state machine.
  *
- *   1. One profiling call infers vertical, schema.org type, brand
- *      voice, audience, primary language, high-value attributes.
- *   2. One batched call writes AEO-optimized one-line summaries for
- *      every product (used in /llms.txt instead of truncated descriptions).
- *   3. The product machine template is picked per-vertical (supplements
- *      get an Ingredients section, apparel gets Sizes & Materials, etc.)
- *      and emits the right schema.org type.
- *   4. The /llms.txt intro is the brandSummary from the profile —
- *      written in the merchant's voice, decision-relevant for AI agents.
+ *   fetchStore → embedProducts → profileStore → summarize
  *
- * Requires ANTHROPIC_API_KEY. Falls back gracefully with a clear
- * error if the key is missing.
+ *   - `fetchStore` pulls shop / products / collections / pages /
+ *     articles / theme via Shopify GraphQL (parallel inside the node).
+ *   - `embedProducts` upserts each product into a libsql vector index
+ *     so downstream nodes can use RAG-retrieved exemplars.
+ *   - `profileStore` is a single Gemini call returning a structured
+ *     StoreProfile (vertical, schema type, brand voice, etc.).
+ *   - `summarize` is a batched Gemini call, with vector-retrieved
+ *     catalog exemplars in-context, producing AEO-formatted product
+ *     one-liners.
+ *
+ *   The resulting state is then folded into the same proposal shape
+ *   the basic Machine Layer playbook produces, so the approve / apply /
+ *   rollback pipeline works identically.
+ *
+ *   LangSmith tracing is automatic when LANGCHAIN_TRACING_V2=true and
+ *   LANGCHAIN_API_KEY are set in env.
  */
 export const adaptiveMachineLayerPlaybook: Playbook = {
   id: "adaptive-machine-layer",
   name: "Adaptive Machine Layer (AI)",
   description:
-    "Claude reads your store, infers vertical / brand voice / audience, then generates a brand-aware /llms.txt with AEO-optimized product summaries plus a vertical-tuned product machine template. Requires ANTHROPIC_API_KEY.",
+    "LangGraph-driven agent: Gemini profiles your store, embeds products into a vector DB for RAG context, and produces AEO-optimized summaries plus a vertical-tuned product machine template. Requires GOOGLE_API_KEY.",
 
-  async run({ shopify }) {
-    if (!process.env.ANTHROPIC_API_KEY) {
+  async run({ shopId, shopify }) {
+    if (
+      !process.env.GOOGLE_API_KEY &&
+      !process.env.GOOGLE_GENERATIVE_AI_API_KEY
+    ) {
       return {
         summary:
-          "ANTHROPIC_API_KEY is not configured. Set it in .env.local and re-run.",
+          "GOOGLE_API_KEY is not configured. Set it in .env.local (Generative Language API key from Google AI Studio).",
         proposals: [],
       };
     }
 
-    // 1. Pull store data.
-    const [shop, products, collections, pages, articles, theme] =
-      await Promise.all([
-        fetchShopInfo(shopify),
-        fetchProducts(shopify, 100),
-        fetchCollections(shopify, 50),
-        fetchPages(shopify, 100),
-        fetchArticles(shopify, 25),
-        fetchPublishedTheme(shopify),
-      ]);
+    // Run the LangGraph agent.
+    const result = await runAdaptiveAgent({ shopId, shopify });
+    const { shop, products, collections, pages, articles, theme, profile, summaries, embeddingsStored } =
+      result;
 
     if (!theme) {
       return {
@@ -72,7 +65,12 @@ export const adaptiveMachineLayerPlaybook: Playbook = {
         proposals: [],
       };
     }
-
+    if (!profile) {
+      return {
+        summary: "Store profiling failed — agent returned no profile.",
+        proposals: [],
+      };
+    }
     if (products.length === 0) {
       return {
         summary:
@@ -81,23 +79,8 @@ export const adaptiveMachineLayerPlaybook: Playbook = {
       };
     }
 
-    // 2. Pull the About page (if any) for richer profiling context.
-    const aboutPage = pages.find(
-      (p) => /^about/i.test(p.handle) || /about/i.test(p.title),
-    );
-
-    // 3. Profile the store with Claude.
-    const profile = await profileStore({
-      shop,
-      sampleProducts: products,
-      aboutPageContent: aboutPage?.bodySummary ?? null,
-    });
-
-    // 4. Generate AI-written summaries for every product.
-    const summaries = await generateProductSummaries({ profile, products });
-
-    // 5. Build the smart /llms.txt.
-    const llmsTxt = generateAdaptiveLlmsTxt({
+    // Build content (deterministic, post-LLM).
+    const llmsTxt = buildAdaptiveLlmsTxt({
       shop,
       profile,
       products,
@@ -106,26 +89,16 @@ export const adaptiveMachineLayerPlaybook: Playbook = {
       articles,
       summaries,
     });
-
-    // 6. /llms-full.txt: keep deterministic generator but prefix with brand summary.
     const llmsFullTxt = `# ${shop.name}\n\n${profile.brandSummary}\n\n${generateLlmsFullTxt(
-      {
-        shop,
-        products,
-        collections,
-        pages,
-        articles,
-      },
+      { shop, products, collections, pages, articles },
     )
       .split("\n")
       .slice(2)
       .join("\n")}`;
-
     const robotsTxt = generateRobotsTxt({ primaryDomain: shop.primaryDomain });
     const productTemplate = pickProductTemplate(profile);
 
-    // 7. Build proposals — re-use the same theme assets as Machine Layer
-    //    but with adaptive content where applicable.
+    // Diff against existing theme assets to skip no-ops.
     const assetKeys = [
       "layout/machine.liquid",
       "sections/machine-product.liquid",
@@ -177,10 +150,7 @@ export const adaptiveMachineLayerPlaybook: Playbook = {
       "sections/machine-product.liquid",
       productTemplate,
       `Product renderer — ${profile.vertical.replace(/_/g, " ")} variant`,
-      `Tuned to surface the attributes that matter for ${profile.vertical.replace(
-        /_/g,
-        " ",
-      )}: ${profile.highValueAttributes.slice(0, 5).join(", ")}. Emits ${profile.schemaType} schema.org type.`,
+      `Tuned for ${profile.vertical.replace(/_/g, " ")} (${profile.highValueAttributes.slice(0, 5).join(", ")}). Emits ${profile.schemaType} schema.org type.`,
     );
     pushAsset(
       "sections/machine-collection.liquid",
@@ -272,7 +242,6 @@ export const adaptiveMachineLayerPlaybook: Playbook = {
       },
     });
 
-    // Inject alternate <link> if not already present.
     const themeLiquid = await fetchThemeAssetText(
       shopify,
       theme.id,
@@ -293,7 +262,7 @@ export const adaptiveMachineLayerPlaybook: Playbook = {
     return {
       summary: `Profile: ${profile.vertical.replace(/_/g, " ")} · ${profile.audienceHint} · ${
         profile.schemaType
-      } schema. Generated ${proposals.length} adaptive change${
+      } schema. Embedded ${embeddingsStored} products. Generated ${proposals.length} adaptive change${
         proposals.length === 1 ? "" : "s"
       } across ${products.length} products.`,
       metrics: {
@@ -302,6 +271,7 @@ export const adaptiveMachineLayerPlaybook: Playbook = {
         language: profile.language,
         products: products.length,
         productsSummarized: summaries.size,
+        embeddingsStored,
         proposals: proposals.length,
       },
       proposals,
@@ -311,7 +281,7 @@ export const adaptiveMachineLayerPlaybook: Playbook = {
 
 // ─────────────────────────────────────────────────────────────────────
 
-function generateAdaptiveLlmsTxt(args: {
+function buildAdaptiveLlmsTxt(args: {
   shop: { name: string; url: string; primaryDomain: string };
   profile: { brandSummary: string; audienceHint: string; brandVoice: string };
   products: Array<{
@@ -397,7 +367,7 @@ function generateAdaptiveLlmsTxt(args: {
   lines.push("---");
   lines.push("");
   lines.push(
-    "_This page is the AI-readable index for this store. Generated by AutoAEO with Claude._",
+    "_This page is the AI-readable index for this store. Generated by AutoAEO with Gemini + LangGraph._",
   );
   lines.push(`_Last updated: ${new Date().toISOString()}_`);
   return lines.join("\n");
