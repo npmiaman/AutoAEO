@@ -6,6 +6,11 @@
   "javascript.preferences.includePackageJsonAutoImports": "off",
   "typescript.preferences.includePackageJsonAutoImports": "off",
 
+  "// Cap the TypeScript Language Server's memory footprint.": "Without this, LangGraph's recursive Annotation generics can balloon the tsserver process.",
+  "typescript.tsserver.maxTsServerMemory": 4096,
+  "typescript.tsserver.experimental.enableProjectDiagnostics": false,
+  "typescript.surveys.enabled": false,
+
   "search.useGlobalIgnoreFiles": true,
   "search.useParentIgnoreFiles": false,
   "search.exclude": {
