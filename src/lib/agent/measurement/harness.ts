@@ -146,7 +146,7 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
   ).slice(0, MAX_SEARCHES);
   if (searches.length === 0) throw new Error("No searches to run.");
 
-  // 1. Every (engine × search) is one grounded call.
+  // Every (engine × search) is one grounded call (sync path).
   const jobs = engines.flatMap((engine) =>
     searches.map((query) => ({ engine, query })),
   );
@@ -154,7 +154,28 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
     engine.query(query),
   );
 
-  // 2. Extract who ranks + our position on each — one batched LLM call.
+  return finalizeScan({
+    input,
+    searches,
+    raw,
+    engineNames: engines.map((e) => e.name),
+  });
+}
+
+/**
+ * Everything after grounding: extract who-ranks (batched), competitive map +
+ * demand + basis + logos, diagnosis, and persist. Shared by the sync scan and
+ * the async Batch-API scan, which only differ in how `raw` was obtained.
+ */
+export async function finalizeScan(args: {
+  input: ScanInput;
+  searches: string[];
+  raw: EngineQueryResult[];
+  engineNames: string[];
+}): Promise<ScanResult> {
+  const { input, searches, raw, engineNames } = args;
+
+  // 1. Extract who ranks + our position on each — one batched LLM call.
   const outcomes: SearchOutcome[] = await extractSearchOutcomes(
     raw,
     input.brandName,
@@ -164,36 +185,28 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
   const scored = outcomes.filter((o) => !o.error);
   const appearedQueries = scored.filter((o) => o.appeared).map((o) => o.query);
 
-  // 3. Competitive intelligence: share of voice + whitespace (free from the
-  //    outcomes), then optional "why they rank" basis for the top competitors.
+  // 2. Competitive intelligence.
   const competitors = buildCompetitiveMap(
     outcomes,
     input.brandName,
     input.primaryDomain,
   );
-
-  // Attach search demand (keyword volume) and re-sort focus by it, so
-  // high-demand gaps rank above long-tail nobody searches.
   if (input.withVolume !== false) {
     const demand = await fetchQueryVolumes(
       competitors.rankings.map((r) => r.query),
     );
     applyDemand(competitors, Object.fromEntries(demand));
   }
-
   const topN = input.analyzeCompetitors ?? 0;
   if (topN > 0 && competitors.competitors.length) {
-    // Batched: all top competitors analyzed in one LLM call.
     competitors.basis = await analyzeCompetitorsBasis({
       competitors: competitors.competitors.slice(0, topN),
       outcomes,
     });
   }
-
-  // Extract the top competitors' logos (fetch their site → real brand logo).
   await resolveCompetitorLogos(competitors, 8);
 
-  // 4. Diagnose the win/loss split, prioritizing the quick-win whitespace.
+  // 3. Diagnose.
   const diagnosis = await diagnose({
     brandName: input.brandName,
     domain: input.primaryDomain,
@@ -202,7 +215,7 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
     whitespace: competitors.focus.quickWins,
   });
 
-  // 4. Persist a single measurement row (counts + detail, no score).
+  // 4. Persist one measurement row.
   let measurementId: string | null = null;
   if (input.persist !== false) {
     measurementId = nanoid();
@@ -215,7 +228,7 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
       appeared: appearedQueries.length,
       total: scored.length,
       detailJson: JSON.stringify({
-        engines: engines.map((e) => e.name),
+        engines: engineNames,
         outcomes,
         diagnosis,
         competitors,
@@ -232,7 +245,7 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
     outcomes,
     diagnosis,
     competitors,
-    engines: engines.map((e) => e.name),
+    engines: engineNames,
     ranAt: Date.now(),
   };
 }

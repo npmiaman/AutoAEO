@@ -1,14 +1,14 @@
 /**
- * Run the daily scan + autonomous loop for one connected site (for testing
- * the full apply/measure/rollback cycle once a store is connected).
+ * Run the scan cadence for one site — submits a batch scan if due, and
+ * finalizes a running batch if its job has completed.
  *
  * Usage:  npm run loop -- --site <siteId>
  *
- * Needs the DB migrated, a provisioned `site` row (created on Shopify install),
- * and OPENAI_API_KEY. This actually writes to and reverts changes on the live
- * store, so point it at a dev store first.
+ * Needs the DB migrated, a provisioned `site` row, and OPENAI_API_KEY. Because
+ * scans run on the async Batch API, a submit won't have results immediately —
+ * run it again in a few minutes to finalize.
  */
-import { runDailyForSite } from "@/lib/agent/loop/daily";
+import { runScanCadenceForSite } from "@/lib/agent/loop/daily";
 
 function arg(name: string): string {
   const i = process.argv.indexOf(`--${name}`);
@@ -18,20 +18,15 @@ function arg(name: string): string {
 
 async function main() {
   const siteId = arg("site");
-  console.log(`\n🔁 Running daily scan + loop for site ${siteId}…\n`);
-  const r = await runDailyForSite(siteId);
-  console.log(`Scan: appeared in ${r.scan.appeared}/${r.scan.total} searches.`);
-  console.log(`\nLoop iterations:`);
-  if (r.iterations.length === 0) console.log("  (autonomy is manual — no actions taken)");
-  for (const it of r.iterations) {
-    console.log(`  • [${it.status}] (${it.changes ?? 0} change/s) — ${it.summary}`);
-    if (it.gained?.length) console.log(`      gained: ${it.gained.join(", ")}`);
-    if (it.lost?.length) console.log(`      lost:   ${it.lost.join(", ")}`);
-  }
+  console.log(`\n🔁 Scan cadence for site ${siteId}…\n`);
+  const r = await runScanCadenceForSite(siteId);
+  console.log(`  → ${r.action}`);
+  if (r.action === "submitted")
+    console.log("  Batch submitted. Run again in a few minutes to finalize.");
   console.log("");
 }
 
 main().catch((e) => {
-  console.error("\nLoop failed:", e instanceof Error ? e.message : e);
+  console.error("\nFailed:", e instanceof Error ? e.message : e);
   process.exit(1);
 });

@@ -258,6 +258,25 @@ export const measurement = sqliteTable("measurement", {
     .default(sql`(unixepoch())`),
 });
 
+// An async visibility scan submitted to OpenAI's Batch API. All ~50 grounded
+// searches go up as one batch job; when it completes we parse the output and
+// finalize a `measurement`. Tracks batch state so the dashboard can poll.
+export const scanJob = sqliteTable("scan_job", {
+  id: text("id").primaryKey(),
+  siteId: text("siteId")
+    .notNull()
+    .references(() => site.id, { onDelete: "cascade" }),
+  status: text("status").notNull(), // 'running' | 'completed' | 'failed'
+  batchId: text("batchId").notNull(), // OpenAI batch id
+  searchesJson: text("searchesJson").notNull(), // the exact searches submitted
+  measurementId: text("measurementId"), // set when finalized
+  error: text("error"),
+  createdAt: integer("createdAt", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  completedAt: integer("completedAt", { mode: "timestamp" }),
+});
+
 // A single proposed change inside an agent run. User reviews/approves these.
 export const changeProposal = sqliteTable("change_proposal", {
   id: text("id").primaryKey(),

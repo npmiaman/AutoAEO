@@ -7,8 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { site as siteTable } from "@/lib/db/schema";
-import { resolveSite } from "@/lib/agent/loop/site";
-import { runVisibilityScan } from "@/lib/agent/measurement/harness";
+import { startBatchScan } from "@/lib/agent/measurement/batch-scan";
 
 export async function runScan(siteId: string): Promise<void> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -21,15 +20,8 @@ export async function runScan(siteId: string): Promise<void> {
     .limit(1);
   if (!owned) redirect("/dashboard");
 
-  const site = await resolveSite(siteId);
-  await runVisibilityScan({
-    siteId,
-    brandName: site.name,
-    primaryDomain: site.primaryDomain,
-    business: site.business,
-    analyzeCompetitors: 3,
-    persist: true,
-  });
-
+  // Submit all searches as one OpenAI Batch job (async). The dashboard polls
+  // and finalizes when the batch completes.
+  await startBatchScan(siteId);
   revalidatePath(`/sites/${siteId}`);
 }

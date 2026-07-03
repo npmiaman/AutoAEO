@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
 import { activeSites } from "@/lib/agent/loop/provision";
-import { runDailyForSite } from "@/lib/agent/loop/daily";
+import { runScanCadenceForSite } from "@/lib/agent/loop/daily";
 
 // ─────────────────────────────────────────────────────────────────────
-// Daily batch endpoint. Runs the visibility scan + autonomous loop for every
-// active site. Intended to be hit once a day by a scheduler (Vercel Cron —
-// see vercel.json). Guarded by CRON_SECRET so it can't be triggered publicly.
-//
-// Runs sites sequentially to stay within provider rate limits; each site's
-// scan already batches its ~50 searches internally.
+// Scan-cadence cron. For every active site it finalizes any completed batch
+// scan and submits a new one if the last scan is older than the cadence
+// (SCAN_CADENCE_DAYS). Meant to run daily (Vercel Cron — see vercel.json);
+// the cadence gate means each site actually re-scans every few days.
+// Guarded by CRON_SECRET.
 // ─────────────────────────────────────────────────────────────────────
 
-export const maxDuration = 300; // seconds (Vercel function cap for the batch)
+export const maxDuration = 300;
 
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -24,12 +23,8 @@ export async function GET(req: Request) {
   const results: Array<Record<string, unknown>> = [];
   for (const site of sites) {
     try {
-      const r = await runDailyForSite(site.id);
-      results.push({
-        site: site.name,
-        appeared: `${r.scan.appeared}/${r.scan.total}`,
-        actions: r.iterations.map((i) => `${i.status}(${i.changes ?? 0})`),
-      });
+      const r = await runScanCadenceForSite(site.id);
+      results.push({ site: site.name, action: r.action });
     } catch (err) {
       results.push({
         site: site.name,

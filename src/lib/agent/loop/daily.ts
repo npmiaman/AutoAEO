@@ -1,50 +1,61 @@
 import "server-only";
-import { runVisibilityScan } from "@/lib/agent/measurement/harness";
-import { resolveSite } from "./site";
-import { runLoopIteration, markLoopRun, type LoopResult } from "./engine";
+import { desc, eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { measurement } from "@/lib/db/schema";
+import {
+  runningScanJob,
+  startBatchScan,
+  finalizeScanJob,
+} from "@/lib/agent/measurement/batch-scan";
 
 // ─────────────────────────────────────────────────────────────────────
-// Daily orchestration for one site (called by the cron):
-//   1. Full visibility scan (~50 searches) — the source-of-truth reading,
-//      persisted with its diagnosis for the loop to plan from.
-//   2. Up to `maxIterations` loop iterations — each picks one untried action,
-//      applies it, targeted-re-measures, and keeps or rolls back.
+// Scan cadence (called by the cron). Per site:
+//   1. If a batch scan is running, try to finalize it (the batch may be done).
+//   2. Otherwise, if the last scan is older than the cadence, submit a new one.
 //
-// Bounded so one site can't run the loop unboundedly in a single day.
+// Scans are asynchronous OpenAI Batch jobs, so the cron both submits new scans
+// and finalizes ones whose batches have completed since the last run.
 // ─────────────────────────────────────────────────────────────────────
 
-const MAX_ITERATIONS = Number(process.env.LOOP_MAX_ITERATIONS_PER_DAY ?? 3);
+const CADENCE_DAYS = Number(process.env.SCAN_CADENCE_DAYS ?? 3);
 
-export interface DailyResult {
+export interface CadenceResult {
   siteId: string;
-  scan: { appeared: number; total: number };
-  iterations: LoopResult[];
+  action: "finalized-running" | "finalized-completed" | "finalized-failed" | "submitted" | "idle";
 }
 
-export async function runDailyForSite(siteId: string): Promise<DailyResult> {
-  const site = await resolveSite(siteId);
-
-  const scan = await runVisibilityScan({
-    siteId,
-    brandName: site.name,
-    primaryDomain: site.primaryDomain,
-    business: site.business,
-    persist: true,
-  });
-
-  const iterations: LoopResult[] = [];
-  if (site.config.autonomy !== "manual") {
-    for (let i = 0; i < MAX_ITERATIONS; i++) {
-      const r = await runLoopIteration(siteId);
-      iterations.push(r);
-      if (r.status === "nothing_to_do" || r.status === "paused") break;
-    }
+export async function runScanCadenceForSite(
+  siteId: string,
+): Promise<CadenceResult> {
+  // 1. Finalize a running job if its batch is done.
+  const running = await runningScanJob(siteId);
+  if (running) {
+    const status = await finalizeScanJob(running);
+    return {
+      siteId,
+      action:
+        status === "completed"
+          ? "finalized-completed"
+          : status === "failed"
+            ? "finalized-failed"
+            : "finalized-running",
+    };
   }
 
-  await markLoopRun(siteId);
-  return {
-    siteId,
-    scan: { appeared: scan.appeared, total: scan.total },
-    iterations,
-  };
+  // 2. Submit a new scan if the last one is older than the cadence.
+  const [latest] = await db
+    .select({ createdAt: measurement.createdAt })
+    .from(measurement)
+    .where(eq(measurement.siteId, siteId))
+    .orderBy(desc(measurement.createdAt))
+    .limit(1);
+
+  const dueMs = CADENCE_DAYS * 86_400_000;
+  const isDue = !latest || Date.now() - latest.createdAt.getTime() > dueMs;
+  if (isDue) {
+    await startBatchScan(siteId);
+    return { siteId, action: "submitted" };
+  }
+
+  return { siteId, action: "idle" };
 }
