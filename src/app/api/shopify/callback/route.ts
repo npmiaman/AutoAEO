@@ -96,7 +96,16 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // 5. Clear the state cookie and redirect into the app.
+  // 5. Provision a `site` for the autonomous loop (idempotent). Best-effort —
+  //    a provisioning hiccup shouldn't block the merchant finishing install.
+  try {
+    const { ensureSiteForShop } = await import("@/lib/agent/loop/provision");
+    await ensureSiteForShop(shopId);
+  } catch (err) {
+    console.error("Site provisioning failed (non-fatal):", err);
+  }
+
+  // 6. Clear the state cookie and redirect into the app.
   const dest = new URL(`/shops/${shopId}/audit`, req.url);
   const res = NextResponse.redirect(dest);
   res.cookies.delete("shopify_oauth_state");
