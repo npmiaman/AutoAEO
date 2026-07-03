@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CompetitiveMap } from "@/lib/agent/measurement/competitors";
 import type { Diagnosis } from "@/lib/agent/measurement/diagnosis";
-import { CompetitorLogo } from "./competitor-logo";
+import { CompetitorChart, type ChartBar } from "./competitor-chart";
 
 export interface ScanDetail {
   competitors: CompetitiveMap;
@@ -62,23 +62,42 @@ export function ScanReport({
   appeared,
   total,
   ranAt,
+  ourName,
+  ourDomain,
 }: {
   detail: ScanDetail;
   appeared: number;
   total: number;
   ranAt: Date | null;
+  ourName: string;
+  ourDomain: string;
 }) {
   const c = detail.competitors;
   const dx = detail.diagnosis;
   const pct = total ? Math.round((appeared / total) * 100) : 0;
   const gaps = c.focus.ourGaps;
   const quickWins = c.focus.quickWins;
-  const topCompetitors = c.competitors.slice(0, 6);
-  const maxCompCount = topCompetitors[0]?.ranksOn.length ?? 0;
   const maxQuickDemand = Math.max(
     0,
     ...quickWins.slice(0, 6).map((q) => c.demand?.[q]?.monthlyVolume ?? 0),
   );
+
+  // Chart data: top competitors + your own bar, ordered by presence count.
+  const bars: ChartBar[] = [
+    ...c.competitors.slice(0, 7).map((comp) => ({
+      name: comp.name,
+      count: comp.ranksOn.length,
+      logoUrl: comp.logoUrl,
+      isUs: false,
+    })),
+    {
+      name: ourName,
+      count: appeared,
+      logoUrl: `https://www.google.com/s2/favicons?domain=${ourDomain}&sz=128`,
+      isUs: true,
+    },
+  ].sort((a, b) => b.count - a.count);
+  const maxCompCount = Math.max(1, ...bars.map((b) => b.count));
 
   return (
     <div className="space-y-6">
@@ -107,94 +126,64 @@ export function ScanReport({
         />
       </div>
 
-      {/* ── Two columns: quick wins + who's winning ─────────────── */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardContent className="space-y-3 py-5">
-            <SectionTitle>Quick wins to grab first</SectionTitle>
-            {quickWins.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No open searches — you&rsquo;re up against strong competitors
-                everywhere. See &ldquo;What to fix&rdquo; below.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {quickWins.slice(0, 6).map((q) => {
-                  const vol = c.demand?.[q]?.monthlyVolume ?? 0;
-                  const w = maxQuickDemand
-                    ? Math.sqrt(vol) / Math.sqrt(maxQuickDemand)
-                    : 0;
-                  return (
-                    <div key={q} className="space-y-1">
-                      <div className="flex items-center justify-between gap-3 text-sm">
-                        <span className="truncate">{q}</span>
-                        {demandTag(c, q) && (
-                          <Badge
-                            variant="secondary"
-                            className="shrink-0 text-[10px]"
-                          >
-                            {demandTag(c, q)}
-                          </Badge>
-                        )}
-                      </div>
-                      {vol > 0 && (
-                        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-foreground/50"
-                            style={{ width: `${Math.max(5, Math.round(w * 100))}%` }}
-                          />
-                        </div>
+      {/* ── Who's winning — vertical bar chart with logos (incl. you) ─ */}
+      <Card>
+        <CardContent className="space-y-5 py-5">
+          <SectionTitle>Who&rsquo;s winning your searches</SectionTitle>
+          {c.competitors.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No recurring competitors surfaced.
+            </p>
+          ) : (
+            <CompetitorChart bars={bars} maxCount={maxCompCount} />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Quick wins ──────────────────────────────────────────── */}
+      <Card>
+        <CardContent className="space-y-3 py-5">
+          <SectionTitle>Quick wins to grab first</SectionTitle>
+          {quickWins.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No open searches — you&rsquo;re up against established competitors
+              everywhere. See &ldquo;What to fix&rdquo; below.
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {quickWins.slice(0, 8).map((q) => {
+                const vol = c.demand?.[q]?.monthlyVolume ?? 0;
+                const w = maxQuickDemand
+                  ? Math.sqrt(vol) / Math.sqrt(maxQuickDemand)
+                  : 0;
+                return (
+                  <div key={q} className="space-y-1">
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="truncate">{q}</span>
+                      {demandTag(c, q) && (
+                        <Badge
+                          variant="secondary"
+                          className="shrink-0 text-[10px]"
+                        >
+                          {demandTag(c, q)}
+                        </Badge>
                       )}
                     </div>
-                  );
-                })}
-                <p className="pt-1 text-[11px] text-muted-foreground">
-                  bar = relative monthly search demand
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="space-y-4 py-5">
-            <SectionTitle>Who&rsquo;s winning</SectionTitle>
-            {topCompetitors.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No recurring competitors surfaced.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {topCompetitors.map((comp) => {
-                  const w = maxCompCount
-                    ? comp.ranksOn.length / maxCompCount
-                    : 0;
-                  return (
-                    <div key={comp.name} className="flex items-center gap-3">
-                      <CompetitorLogo src={comp.logoUrl} name={comp.name} />
-                      <span className="w-24 shrink-0 truncate text-sm sm:w-32">
-                        {comp.name}
-                      </span>
-                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                    {vol > 0 && (
+                      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full rounded-full bg-foreground"
-                          style={{ width: `${Math.max(6, Math.round(w * 100))}%` }}
+                          className="h-full rounded-full bg-foreground/50"
+                          style={{ width: `${Math.max(5, Math.round(w * 100))}%` }}
                         />
                       </div>
-                      <span className="w-4 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                        {comp.ranksOn.length}
-                      </span>
-                    </div>
-                  );
-                })}
-                <p className="pt-1 text-[11px] text-muted-foreground">
-                  bar = how many of your searches each shows up on
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ── What to fix ─────────────────────────────────────────── */}
       {dx.recommendations.length > 0 && (

@@ -4,19 +4,21 @@ import type { KeywordVolume, VolumeProvider } from "./types";
 
 // ─────────────────────────────────────────────────────────────────────
 // LLM estimate — a rough, clearly-labeled fallback so demand ranking works
-// before a real keyword-data API is configured. Returns coarse buckets (a
-// representative monthly number), NOT precise volume. `source` says so, so it
-// never masquerades as ground truth. Swap in DataForSEO for real numbers.
+// before a real keyword-data API is configured. Asks for a realistic monthly
+// NUMBER per keyword (varied, not coarse buckets), so long-tail phrases read as
+// tens/hundreds while broad head terms read as thousands. `source` says it's an
+// estimate. Swap in a real provider (DataForSEO) for ground-truth volume.
 // ─────────────────────────────────────────────────────────────────────
 
-// Coarse buckets → representative monthly searches (order-of-magnitude only).
-const BUCKETS: Record<string, number> = {
-  very_high: 50_000,
-  high: 10_000,
-  medium: 2_000,
-  low: 300,
-  niche: 40,
-};
+// Snap a raw estimate to a "nice" number so it reads like a real volume figure
+// rather than a suspiciously precise one, while preserving its magnitude.
+function tidy(n: number): number {
+  if (!Number.isFinite(n) || n <= 0) return 10;
+  if (n < 100) return Math.round(n / 10) * 10;
+  if (n < 1000) return Math.round(n / 50) * 50;
+  if (n < 10000) return Math.round(n / 100) * 100;
+  return Math.round(n / 1000) * 1000;
+}
 
 export const estimateProvider: VolumeProvider = {
   name: "llm-estimate",
@@ -33,25 +35,31 @@ export const estimateProvider: VolumeProvider = {
     const unique = [...new Set(keywords.map((k) => k.toLowerCase().trim()))].filter(Boolean);
     if (unique.length === 0) return out;
 
-    const prompt = `Estimate US Google monthly search demand for each keyword as a bucket: very_high, high, medium, low, or niche. Base it on how commonly people search this. Be realistic — most specific/long-tail keywords are low or niche.
+    const prompt = `Estimate US Google average monthly search volume for each keyword. Give a realistic integer for each — NOT round buckets, and don't give many keywords the same number.
+
+Guidance (realistic ranges):
+- Broad, common head terms ("hire a plumber", "crm software"): 5,000–60,000
+- Mid specificity ("best crm for startups"): 500–5,000
+- Long-tail / very specific / conversational phrasing: 20–500
+Most conversational, multi-word phrases are long-tail (low). Vary the numbers so they reflect genuine differences in demand.
 
 Keywords:
 ${unique.map((k, i) => `${i + 1}. ${k}`).join("\n")}
 
-Return ONLY JSON array of {"keyword","bucket"} in order:
-[{"keyword":"...","bucket":"medium"}]`;
+Return ONLY a JSON array of {"keyword","monthly"} (monthly = integer), in order:
+[{"keyword":"...","monthly":720}]`;
 
     try {
-      const raw = await generateText(prompt, { temperature: 0 });
+      const raw = await generateText(prompt, { temperature: 0.4 });
       const parsed = JSON.parse(
         raw.slice(raw.indexOf("["), raw.lastIndexOf("]") + 1),
-      ) as Array<{ keyword?: string; bucket?: string }>;
+      ) as Array<{ keyword?: string; monthly?: number }>;
       for (const p of parsed) {
         if (!p.keyword) continue;
-        const bucket = (p.bucket ?? "low").toLowerCase();
+        const n = typeof p.monthly === "number" ? p.monthly : Number(p.monthly);
         out.set(p.keyword.toLowerCase(), {
           keyword: p.keyword,
-          monthlyVolume: BUCKETS[bucket] ?? BUCKETS.low,
+          monthlyVolume: tidy(n),
           competition: null,
           source: "llm-estimate",
         });

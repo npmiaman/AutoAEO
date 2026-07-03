@@ -89,6 +89,8 @@ export default async function SitePage({
           appeared={latest.appeared}
           total={latest.total}
           ranAt={latest.createdAt}
+          ourName={site.name}
+          ourDomain={site.primaryDomain}
         />
       ) : (
         !scanning && (
