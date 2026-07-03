@@ -53,7 +53,8 @@ export interface CompetitiveMap {
   ourAppearances: number;
   rankings: QueryRanking[]; // who ranks where, per query
   // Factual sets — which queries each competitor ranks on (NO percentage score).
-  competitors: Array<{ name: string; ranksOn: string[] }>;
+  // `domain` is resolved from the cited sources for logo display.
+  competitors: Array<{ name: string; ranksOn: string[]; domain?: string }>;
   strongCompetitors: string[]; // recurring winners (context for focus signals)
   focus: FocusSignals;
   // Search demand keyed by query — attached after the map is built. Focus
@@ -77,6 +78,30 @@ function isSelf(name: string, ourName: string, ourDomain: string): boolean {
   return (
     n === normalizeName(ourName) || n === normalizeName(ourDomain.split(".")[0])
   );
+}
+
+// Resolve a competitor's domain (for logo display). If the name itself is a
+// domain, use it; otherwise match it against the cited source hosts on the
+// searches it ranked for.
+function resolveDomain(name: string, outcomes: SearchOutcome[]): string | undefined {
+  const asDomain = name.trim().toLowerCase().match(/([a-z0-9-]+\.)+[a-z]{2,}/);
+  if (asDomain) return asDomain[0];
+  const token = normalizeName(name);
+  if (!token) return undefined;
+  for (const o of outcomes) {
+    if (!o.rankedEntities.includes(name)) continue;
+    for (const url of o.citations) {
+      const host = hostOf(url);
+      const hn = normalizeName(host);
+      if (
+        host &&
+        (hn.includes(token) ||
+          token.includes(hn.replace(/(com|io|co|net|org)$/, "")))
+      )
+        return host;
+    }
+  }
+  return undefined;
 }
 
 export function buildCompetitiveMap(
@@ -111,7 +136,11 @@ export function buildCompetitiveMap(
     }
   }
   const competitors = [...compQueries.entries()]
-    .map(([name, qs]) => ({ name, ranksOn: [...qs] }))
+    .map(([name, qs]) => ({
+      name,
+      ranksOn: [...qs],
+      domain: resolveDomain(name, scored),
+    }))
     .sort((a, b) => b.ranksOn.length - a.ranksOn.length);
 
   // "Strong" = recurring winners; used only to classify search difficulty.

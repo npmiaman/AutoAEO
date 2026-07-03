@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CompetitiveMap } from "@/lib/agent/measurement/competitors";
 import type { Diagnosis } from "@/lib/agent/measurement/diagnosis";
+import { CompetitorLogo } from "./competitor-logo";
 
 export interface ScanDetail {
   competitors: CompetitiveMap;
@@ -73,6 +74,11 @@ export function ScanReport({
   const gaps = c.focus.ourGaps;
   const quickWins = c.focus.quickWins;
   const topCompetitors = c.competitors.slice(0, 6);
+  const maxCompCount = topCompetitors[0]?.ranksOn.length ?? 0;
+  const maxQuickDemand = Math.max(
+    0,
+    ...quickWins.slice(0, 6).map((q) => c.demand?.[q]?.monthlyVolume ?? 0),
+  );
 
   return (
     <div className="space-y-6">
@@ -112,47 +118,79 @@ export function ScanReport({
                 everywhere. See &ldquo;What to fix&rdquo; below.
               </p>
             ) : (
-              <ul className="space-y-2">
-                {quickWins.slice(0, 6).map((q) => (
-                  <li
-                    key={q}
-                    className="flex items-center justify-between gap-3 text-sm"
-                  >
-                    <span className="truncate">{q}</span>
-                    {demandTag(c, q) && (
-                      <Badge variant="secondary" className="shrink-0 text-[10px]">
-                        {demandTag(c, q)}
-                      </Badge>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-3">
+                {quickWins.slice(0, 6).map((q) => {
+                  const vol = c.demand?.[q]?.monthlyVolume ?? 0;
+                  const w = maxQuickDemand
+                    ? Math.sqrt(vol) / Math.sqrt(maxQuickDemand)
+                    : 0;
+                  return (
+                    <div key={q} className="space-y-1">
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <span className="truncate">{q}</span>
+                        {demandTag(c, q) && (
+                          <Badge
+                            variant="secondary"
+                            className="shrink-0 text-[10px]"
+                          >
+                            {demandTag(c, q)}
+                          </Badge>
+                        )}
+                      </div>
+                      {vol > 0 && (
+                        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-foreground/50"
+                            style={{ width: `${Math.max(5, Math.round(w * 100))}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                <p className="pt-1 text-[11px] text-muted-foreground">
+                  bar = relative monthly search demand
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="space-y-3 py-5">
+          <CardContent className="space-y-4 py-5">
             <SectionTitle>Who&rsquo;s winning</SectionTitle>
             {topCompetitors.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No recurring competitors surfaced.
               </p>
             ) : (
-              <ul className="space-y-2">
-                {topCompetitors.map((comp) => (
-                  <li
-                    key={comp.name}
-                    className="flex items-center justify-between gap-3 text-sm"
-                  >
-                    <span className="truncate">{comp.name}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      on {comp.ranksOn.length} search
-                      {comp.ranksOn.length === 1 ? "" : "es"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-3">
+                {topCompetitors.map((comp) => {
+                  const w = maxCompCount
+                    ? comp.ranksOn.length / maxCompCount
+                    : 0;
+                  return (
+                    <div key={comp.name} className="flex items-center gap-3">
+                      <CompetitorLogo domain={comp.domain} name={comp.name} />
+                      <span className="w-24 shrink-0 truncate text-sm sm:w-32">
+                        {comp.name}
+                      </span>
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-foreground"
+                          style={{ width: `${Math.max(6, Math.round(w * 100))}%` }}
+                        />
+                      </div>
+                      <span className="w-4 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                        {comp.ranksOn.length}
+                      </span>
+                    </div>
+                  );
+                })}
+                <p className="pt-1 text-[11px] text-muted-foreground">
+                  bar = how many of your searches each shows up on
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
