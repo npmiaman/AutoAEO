@@ -21,7 +21,7 @@ async function main() {
   const business = arg("business");
   const brandName = arg("brand");
   const primaryDomain = arg("domain");
-  const count = Number(arg("count", "15"));
+  const maxArg = arg("max", ""); // optional dev cap; unset → natural set (≤50)
 
   console.log(`\n🔎 Scanning ${brandName} (${primaryDomain})…\n`);
   const scan = await runVisibilityScan({
@@ -29,7 +29,7 @@ async function main() {
     brandName,
     primaryDomain,
     business,
-    searchCount: count,
+    ...(maxArg ? { maxSearches: Number(maxArg) } : {}),
     persist: false,
     analyzeCompetitors: 3,
   });

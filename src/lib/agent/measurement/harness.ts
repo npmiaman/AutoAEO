@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { measurement } from "@/lib/db/schema";
 import { availableEngines, type AiEngine } from "./engines";
 import type { EngineQueryResult } from "./engines/types";
-import { generateSearchIdeas } from "./searches";
+import { generateSearchIdeas, MAX_SEARCHES } from "./searches";
 import { extractSearchOutcomes, type SearchOutcome } from "./ranking";
 import { diagnose, type Diagnosis } from "./diagnosis";
 import {
@@ -97,8 +97,10 @@ export interface ScanInput {
   brandName: string;
   primaryDomain: string;
   business: string; // description used to generate searches, e.g. "a plumber in Ohio"
-  searches?: string[]; // fixed daily set; generated if omitted
-  searchCount?: number; // when generating, default 50
+  searches?: string[]; // fixed daily set; generated (natural, ≤50) if omitted
+  // Dev-only lower cap for quick tests (never exceeds MAX_SEARCHES). The product
+  // leaves this unset so the model generates its natural set up to 50.
+  maxSearches?: number;
   engines?: AiEngine[]; // defaults to all available (respecting the allowlist)
   goalId?: string | null;
   experimentId?: string | null;
@@ -133,12 +135,14 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
     );
   }
 
-  const searches =
+  // Let the model decide how many searches to make; only cap at MAX_SEARCHES.
+  const searches = (
     input.searches ??
     (await generateSearchIdeas({
       business: input.business,
-      count: input.searchCount ?? 50,
-    }));
+      max: input.maxSearches,
+    }))
+  ).slice(0, MAX_SEARCHES);
   if (searches.length === 0) throw new Error("No searches to run.");
 
   // 1. Every (engine × search) is one grounded call.

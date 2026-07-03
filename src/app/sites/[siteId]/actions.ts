@@ -10,8 +10,6 @@ import { site as siteTable } from "@/lib/db/schema";
 import { resolveSite } from "@/lib/agent/loop/site";
 import { runVisibilityScan } from "@/lib/agent/measurement/harness";
 
-const SEARCH_COUNT = Number(process.env.DASHBOARD_SCAN_COUNT ?? 15);
-
 export async function runScan(siteId: string): Promise<void> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/signin");
@@ -29,8 +27,7 @@ export async function runScan(siteId: string): Promise<void> {
     brandName: site.name,
     primaryDomain: site.primaryDomain,
     business: site.business,
-    searchCount: SEARCH_COUNT,
-    analyzeCompetitors: 2,
+    analyzeCompetitors: 3,
     persist: true,
   });
 

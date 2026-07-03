@@ -29,7 +29,6 @@ export async function runDailyForSite(siteId: string): Promise<DailyResult> {
     brandName: site.name,
     primaryDomain: site.primaryDomain,
     business: site.business,
-    searchCount: 50,
     persist: true,
   });
 

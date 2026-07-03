@@ -173,7 +173,7 @@ async function resolveTargets(
     const set = [...diagnosis.missingOn, ...diagnosis.rankedOn];
     if (set.length > 0) return dedupe(set).slice(0, 20);
   }
-  return generateSearchIdeas({ business: site.business, count: 10 });
+  return generateSearchIdeas({ business: site.business });
 }
 
 function dedupe(list: string[]): string[] {
