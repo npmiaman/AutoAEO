@@ -160,6 +160,34 @@ export const siteArtifact = sqliteTable("site_artifact", {
     .default(sql`(unixepoch())`),
 });
 
+// A test the improvement planner proposes: a hypothesis + action + a KPI tied
+// to specific searches. The periodic evaluator re-measures the KPI searches,
+// compares baseline vs latest appearances, and marks tests won/dropped so the
+// loop doubles down on whatever produced the most signal. No scores — KPIs are
+// counts of which target searches we now appear on.
+export const improvementTest = sqliteTable("improvement_test", {
+  id: text("id").primaryKey(),
+  siteId: text("siteId")
+    .notNull()
+    .references(() => site.id, { onDelete: "cascade" }),
+  focusArea: text("focusArea").notNull(),
+  hypothesis: text("hypothesis").notNull(),
+  action: text("action").notNull(),
+  kpiMetric: text("kpiMetric").notNull(), // human description of the KPI
+  kpiQueriesJson: text("kpiQueriesJson").notNull(), // string[] — searches to re-measure
+  kpiTarget: integer("kpiTarget").notNull(), // appear on >= N of them
+  windowDays: integer("windowDays").notNull(),
+  status: text("status").notNull().default("proposed"), // proposed|running|won|dropped
+  baselineHits: integer("baselineHits"), // # target searches we appeared on at start
+  baselineAppearedJson: text("baselineAppearedJson"),
+  latestHits: integer("latestHits"),
+  latestAppearedJson: text("latestAppearedJson"),
+  createdAt: integer("createdAt", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  evaluatedAt: integer("evaluatedAt", { mode: "timestamp" }),
+});
+
 // A standing optimization objective for a site. The loop turns goals into
 // experiments and measures progress against them.
 export const goal = sqliteTable("goal", {

@@ -3,50 +3,58 @@ import { generateText } from "./llm";
 import type { SearchOutcome } from "./ranking";
 
 // ─────────────────────────────────────────────────────────────────────
-// Competitive intelligence. From one scan we already know who appeared on
-// each search. This turns that into strategy:
-//   • Share of Voice  — who wins most, and on which searches.
-//   • Whitespace      — searches where NO strong competitor appears (only
-//                       weak/thin players): the easiest wins to double down on.
-//   • Ranking basis   — for the leaders, fetch a cited page and decode WHY it
-//                       gets cited (schema, answer-first, depth), so we know
-//                       what to replicate and beat.
+// Competitive map — NOT a score. For every query AI ran, we record where WE
+// stand and who ranks where (us + every competitor, in order). From that map
+// we surface FOCUS SIGNALS — the whitespace and quick wins to attack — and,
+// for the leaders, decode WHY they get cited so we know how to beat them.
 // ─────────────────────────────────────────────────────────────────────
 
-export interface CompetitorStanding {
+export interface RankedPlayer {
   name: string;
-  appearances: number;
-  shareOfVoice: number; // appearances / total searches (0..1)
-  searches: string[]; // where they appear
-  avgPosition: number | null;
+  position: number; // 1-based, as the AI presented them
+  isUs: boolean;
 }
 
-export interface WhitespaceSearch {
+// Where everyone stands on a single query.
+export interface QueryRanking {
   query: string;
-  strength: "open" | "moderate" | "contested";
-  strongIncumbents: string[]; // recurring competitors present (empty = open)
+  ourPosition: number | null; // where WE stand (null = absent)
+  ranked: RankedPlayer[]; // everyone named, in order
+}
+
+export interface FocusSignals {
+  // Absent searches where NO strong competitor appears — fastest to win.
+  quickWins: string[];
+  // Searches we already win (defend + strengthen).
+  ourWins: string[];
+  // Absent searches dominated by 3+ strong competitors — hard, deprioritize.
+  entrenched: string[];
+  // All absent searches (the full gap).
+  ourGaps: string[];
 }
 
 export interface CompetitorBasis {
   name: string;
-  url: string | null; // the cited page we analyzed
-  rankedFor: string[]; // sample searches they win
+  url: string | null;
+  ranksOn: string[];
   factors: string[]; // WHY they get cited (evidence-based)
   howToBeat: string[]; // concrete moves to out-rank them
 }
 
-export interface CompetitiveReport {
+export interface CompetitiveMap {
   totalSearches: number;
-  leaderboard: CompetitorStanding[];
-  strongCompetitors: string[]; // recurring winners
-  whitespace: WhitespaceSearch[]; // "open" searches — double down here first
+  ourAppearances: number;
+  rankings: QueryRanking[]; // who ranks where, per query
+  // Factual sets — which queries each competitor ranks on (NO percentage score).
+  competitors: Array<{ name: string; ranksOn: string[] }>;
+  strongCompetitors: string[]; // recurring winners (context for focus signals)
+  focus: FocusSignals;
   basis: CompetitorBasis[]; // per-leader ranking-factor analysis (optional)
 }
 
 function normalizeName(s: string): string {
   return s.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 }
-
 function hostOf(url: string): string {
   try {
     return new URL(url).host.replace(/^www\./, "");
@@ -54,84 +62,76 @@ function hostOf(url: string): string {
     return "";
   }
 }
-
-/** Is this ranked entity actually us? (so we exclude ourselves.) */
 function isSelf(name: string, ourName: string, ourDomain: string): boolean {
   const n = normalizeName(name);
   return (
-    n === normalizeName(ourName) ||
-    n === normalizeName(ourDomain.split(".")[0])
+    n === normalizeName(ourName) || n === normalizeName(ourDomain.split(".")[0])
   );
 }
 
-export function buildCompetitiveReport(
+export function buildCompetitiveMap(
   outcomes: SearchOutcome[],
   ourName: string,
   ourDomain: string,
-): CompetitiveReport {
+): CompetitiveMap {
   const scored = outcomes.filter((o) => !o.error);
   const total = scored.length;
 
-  // Tally appearances + positions per competitor.
-  const tally = new Map<
-    string,
-    { appearances: number; searches: Set<string>; positions: number[] }
-  >();
-  for (const o of scored) {
-    o.rankedEntities.forEach((name, idx) => {
-      if (isSelf(name, ourName, ourDomain)) return;
-      const key = name.trim();
-      if (!key) return;
-      const t = tally.get(key) ?? {
-        appearances: 0,
-        searches: new Set<string>(),
-        positions: [],
-      };
-      t.appearances += 1;
-      t.searches.add(o.query);
-      t.positions.push(idx + 1);
-      tally.set(key, t);
-    });
-  }
-
-  const leaderboard: CompetitorStanding[] = [...tally.entries()]
-    .map(([name, t]) => ({
+  // Per-query ranking map (us + competitors, in order).
+  const rankings: QueryRanking[] = scored.map((o) => ({
+    query: o.query,
+    ourPosition: o.position,
+    ranked: o.rankedEntities.map((name, idx) => ({
       name,
-      appearances: t.appearances,
-      shareOfVoice: total ? t.appearances / total : 0,
-      searches: [...t.searches],
-      avgPosition: t.positions.length
-        ? t.positions.reduce((a, b) => a + b, 0) / t.positions.length
-        : null,
-    }))
-    .sort((a, b) => b.appearances - a.appearances);
+      position: idx + 1,
+      isUs: isSelf(name, ourName, ourDomain),
+    })),
+  }));
 
-  // "Strong" = recurring winners (appear on several searches). Threshold scales
-  // with the search-set size but is at least 2.
+  // Which queries each competitor ranks on (factual sets, no scores).
+  const compQueries = new Map<string, Set<string>>();
+  for (const o of scored) {
+    for (const name of o.rankedEntities) {
+      if (isSelf(name, ourName, ourDomain)) continue;
+      const key = name.trim();
+      if (!key) continue;
+      (compQueries.get(key) ?? compQueries.set(key, new Set()).get(key)!).add(
+        o.query,
+      );
+    }
+  }
+  const competitors = [...compQueries.entries()]
+    .map(([name, qs]) => ({ name, ranksOn: [...qs] }))
+    .sort((a, b) => b.ranksOn.length - a.ranksOn.length);
+
+  // "Strong" = recurring winners; used only to classify search difficulty.
   const strongThreshold = Math.max(2, Math.ceil(total * 0.15));
   const strongSet = new Set(
-    leaderboard.filter((c) => c.appearances >= strongThreshold).map((c) => c.name),
+    competitors.filter((c) => c.ranksOn.length >= strongThreshold).map((c) => c.name),
   );
 
-  // Classify each search by how contested it is.
-  const whitespace: WhitespaceSearch[] = scored.map((o) => {
+  const ourWins: string[] = [];
+  const ourGaps: string[] = [];
+  const quickWins: string[] = [];
+  const entrenched: string[] = [];
+  for (const o of scored) {
+    if (o.appeared) {
+      ourWins.push(o.query);
+      continue;
+    }
+    ourGaps.push(o.query);
     const strongPresent = o.rankedEntities.filter((e) => strongSet.has(e));
-    const strength: WhitespaceSearch["strength"] =
-      strongPresent.length === 0
-        ? "open"
-        : strongPresent.length >= 3
-          ? "contested"
-          : "moderate";
-    return { query: o.query, strength, strongIncumbents: strongPresent };
-  });
+    if (strongPresent.length === 0) quickWins.push(o.query);
+    else if (strongPresent.length >= 3) entrenched.push(o.query);
+  }
 
   return {
     totalSearches: total,
-    leaderboard,
+    ourAppearances: ourWins.length,
+    rankings,
+    competitors,
     strongCompetitors: [...strongSet],
-    whitespace: whitespace
-      .filter((w) => w.strength === "open")
-      .concat(whitespace.filter((w) => w.strength !== "open")),
+    focus: { quickWins, ourWins, entrenched, ourGaps },
     basis: [],
   };
 }
@@ -155,7 +155,6 @@ async function fetchPageText(url: string): Promise<string | null> {
   }
 }
 
-/** Find the cited URL that belongs to a competitor, across searches they won. */
 function citationForCompetitor(
   name: string,
   outcomes: SearchOutcome[],
@@ -173,13 +172,12 @@ function citationForCompetitor(
 }
 
 export async function analyzeCompetitorBasis(args: {
-  competitor: CompetitorStanding;
+  name: string;
+  ranksOn: string[];
   outcomes: SearchOutcome[];
 }): Promise<CompetitorBasis> {
-  const { competitor, outcomes } = args;
-  const url = citationForCompetitor(competitor.name, outcomes);
+  const url = citationForCompetitor(args.name, args.outcomes);
   const html = url ? await fetchPageText(url) : null;
-
   const pageText = html
     ? html
         .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -192,7 +190,7 @@ export async function analyzeCompetitorBasis(args: {
   const hasSchema = html ? /application\/ld\+json/i.test(html) : false;
   const hasFaqSchema = html ? /"FAQPage"|"@type"\s*:\s*"Question"/i.test(html) : false;
 
-  const prompt = `A competitor "${competitor.name}" gets cited by AI assistants for searches like: ${competitor.searches
+  const prompt = `A competitor "${args.name}" gets cited by AI assistants for: ${args.ranksOn
     .slice(0, 4)
     .join("; ")}.
 
@@ -200,9 +198,9 @@ ${url ? `Their cited page: ${url}` : "No cited page URL was resolvable."}
 Detected on page: JSON-LD schema=${hasSchema}, FAQ schema=${hasFaqSchema}.
 ${pageText ? `Page content (excerpt):\n"""${pageText}"""` : "(page content unavailable)"}
 
-Explain, specifically and evidence-based (not generic):
-1. WHY this page/brand gets cited — the ranking factors actually present (content structure, schema, entities, authority, freshness).
-2. HOW to out-rank them — concrete moves for a competitor to beat them on these searches.
+Explain, evidence-based (not generic):
+1. WHY this page/brand gets cited — ranking factors actually present.
+2. HOW to out-rank them — concrete moves.
 
 Return ONLY JSON: {"factors": ["..."], "howToBeat": ["..."]}`;
 
@@ -212,19 +210,13 @@ Return ONLY JSON: {"factors": ["..."], "howToBeat": ["..."]}`;
       raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1),
     ) as { factors?: string[]; howToBeat?: string[] };
     return {
-      name: competitor.name,
+      name: args.name,
       url,
-      rankedFor: competitor.searches.slice(0, 4),
+      ranksOn: args.ranksOn.slice(0, 4),
       factors: parsed.factors ?? [],
       howToBeat: parsed.howToBeat ?? [],
     };
   } catch {
-    return {
-      name: competitor.name,
-      url,
-      rankedFor: competitor.searches.slice(0, 4),
-      factors: [],
-      howToBeat: [],
-    };
+    return { name: args.name, url, ranksOn: args.ranksOn.slice(0, 4), factors: [], howToBeat: [] };
   }
 }

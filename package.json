@@ -12,6 +12,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "scan": "node --conditions=react-server --env-file=.env.local --import tsx scripts/scan.ts",
+    "plan": "node --conditions=react-server --env-file=.env.local --import tsx scripts/plan.ts",
     "loop": "node --conditions=react-server --env-file=.env.local --import tsx scripts/loop.ts"
   },
   "dependencies": {

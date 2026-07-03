@@ -15,6 +15,13 @@
       "when": 1783066039681,
       "tag": "0001_silent_spacker_dave",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783068810068,
+      "tag": "0002_equal_blackheart",
+      "breakpoints": true
     }
   ]
 }

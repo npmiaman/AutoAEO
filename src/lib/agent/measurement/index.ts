@@ -16,13 +16,27 @@ export {
   type Recommendation,
 } from "./diagnosis";
 export {
-  buildCompetitiveReport,
+  buildCompetitiveMap,
   analyzeCompetitorBasis,
-  type CompetitiveReport,
-  type CompetitorStanding,
-  type WhitespaceSearch,
+  type CompetitiveMap,
+  type QueryRanking,
+  type RankedPlayer,
+  type FocusSignals,
   type CompetitorBasis,
 } from "./competitors";
+export {
+  buildImprovementPlan,
+  type ImprovementPlan,
+  type FocusArea,
+  type Test,
+  type Kpi,
+} from "./planner";
+export {
+  savePlan,
+  evaluateAndDoubleDown,
+  type TestEvaluation,
+  type DoubleDownResult,
+} from "./plan-store";
 export {
   availableEngines,
   ALL_ENGINES,

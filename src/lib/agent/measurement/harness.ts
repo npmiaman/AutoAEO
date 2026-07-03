@@ -8,9 +8,9 @@ import { generateSearchIdeas } from "./searches";
 import { extractSearchOutcome, type SearchOutcome } from "./ranking";
 import { diagnose, type Diagnosis } from "./diagnosis";
 import {
-  buildCompetitiveReport,
+  buildCompetitiveMap,
   analyzeCompetitorBasis,
-  type CompetitiveReport,
+  type CompetitiveMap,
 } from "./competitors";
 
 // ─────────────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ export interface ScanResult {
   appearedQueries: string[];
   outcomes: SearchOutcome[];
   diagnosis: Diagnosis;
-  competitors: CompetitiveReport;
+  competitors: CompetitiveMap;
   engines: string[];
   ranAt: number;
 }
@@ -153,29 +153,27 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
 
   // 3. Competitive intelligence: share of voice + whitespace (free from the
   //    outcomes), then optional "why they rank" basis for the top competitors.
-  const competitors = buildCompetitiveReport(
+  const competitors = buildCompetitiveMap(
     outcomes,
     input.brandName,
     input.primaryDomain,
   );
   const topN = input.analyzeCompetitors ?? 0;
-  if (topN > 0 && competitors.leaderboard.length) {
+  if (topN > 0 && competitors.competitors.length) {
     competitors.basis = await mapLimit(
-      competitors.leaderboard.slice(0, topN),
+      competitors.competitors.slice(0, topN),
       2,
-      (c) => analyzeCompetitorBasis({ competitor: c, outcomes }),
+      (c) => analyzeCompetitorBasis({ name: c.name, ranksOn: c.ranksOn, outcomes }),
     );
   }
 
-  // 4. Diagnose the win/loss split, informed by the whitespace.
+  // 4. Diagnose the win/loss split, prioritizing the quick-win whitespace.
   const diagnosis = await diagnose({
     brandName: input.brandName,
     domain: input.primaryDomain,
     business: input.business,
     outcomes,
-    whitespace: competitors.whitespace
-      .filter((w) => w.strength === "open")
-      .map((w) => w.query),
+    whitespace: competitors.focus.quickWins,
   });
 
   // 4. Persist a single measurement row (counts + detail, no score).

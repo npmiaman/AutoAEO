@@ -70,28 +70,28 @@ async function main() {
 
   const c = r.competitors;
   console.log("\n" + "─".repeat(64));
-  console.log("COMPETITOR SHARE OF VOICE (who wins these searches):");
-  for (const s of c.leaderboard.slice(0, 10)) {
-    console.log(
-      `  ${Math.round(s.shareOfVoice * 100)
-        .toString()
-        .padStart(3)}%  ${s.name}  (${s.appearances} search${
-        s.appearances === 1 ? "" : "es"
-      }${s.avgPosition ? `, avg #${s.avgPosition.toFixed(1)}` : ""})`,
-    );
+  console.log("RANKING MAP (where we stand + who ranks where):");
+  for (const q of c.rankings) {
+    const us = q.ourPosition ? `WE #${q.ourPosition}` : "WE —";
+    const others = q.ranked
+      .filter((p) => !p.isUs)
+      .slice(0, 5)
+      .map((p) => p.name)
+      .join(" · ");
+    console.log(`  ${us.padEnd(7)} | ${q.query}`);
+    if (others) console.log(`          └ ${others}`);
   }
 
-  const open = c.whitespace.filter((w) => w.strength === "open");
   console.log(
-    `\nWHITESPACE — ${open.length} search(es) where NO strong competitor appears (win these first):`,
+    `\nQUICK-WIN WHITESPACE — ${c.focus.quickWins.length} search(es), no strong rival (win first):`,
   );
-  for (const w of open.slice(0, 12)) console.log(`  ○ ${w.query}`);
+  for (const q of c.focus.quickWins) console.log(`  ○ ${q}`);
 
   if (c.basis.length) {
     console.log("\nWHY THE LEADERS RANK (and how to beat them):");
     for (const b of c.basis) {
       console.log(`  ▸ ${b.name}${b.url ? `  (${b.url})` : ""}`);
-      b.factors.slice(0, 3).forEach((f) => console.log(`      why: ${f}`));
+      b.factors.slice(0, 2).forEach((f) => console.log(`      why: ${f}`));
       b.howToBeat.slice(0, 2).forEach((h) => console.log(`      beat: ${h}`));
     }
   }
