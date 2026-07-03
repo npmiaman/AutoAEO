@@ -1,10 +1,42 @@
 # AutoAEO
 
-**AI-search optimization for Shopify. Get cited by ChatGPT, Claude, and Perplexity — without lifting a finger.**
+**An autonomous SEO + AEO agent. It measures where your site shows up in AI search, fixes what's missing, verifies the fix actually helped, and remembers what worked — on Shopify or any custom-coded site.**
 
 ---
 
-AI search engines like ChatGPT, Claude, Perplexity, and Google's AI Mode increasingly answer shopping questions by reading the web — but they struggle with Shopify stores because the actual product information is buried under theme code, navigation menus, popups, scripts, and analytics tags. **AutoAEO connects to your Shopify store via OAuth, reads everything in it, and automatically publishes a clean, machine-readable version alongside your existing storefront.** Your customers still see your beautiful theme. AI agents — guided by standard discovery signals (`/llms.txt`, `<link rel="alternate">` tags, an AI-friendly `robots.txt`) — are routed to a stripped-down, structured version designed specifically for them to ingest, parse, and quote. Every change is shown as a before/after diff, requires your one-click approval before going live, and can be rolled back in a single click. Nothing touches your live store without you explicitly approving it.
+## What it does
+
+AI assistants (ChatGPT, Perplexity, Gemini) increasingly answer buying questions directly — and if they don't surface *you*, they surface a competitor. AutoAEO runs a continuous loop:
+
+1. **Measure (autoresearch).** It generates ~50 realistic searches a real person would type for your business (including adjacent ones), runs them against live, web-grounded AI engines, and reports — with no vanity score — **how often you show up, which searches you're invisible on, and exactly who's winning them instead.**
+2. **Diagnose.** An LLM, grounded in a real 2026 AEO/SEO strategy playbook ([docs/aeo-seo-strategy.md](docs/aeo-seo-strategy.md)), decodes *why* you win the searches you win and what's missing on the ones you don't.
+3. **Act.** An autonomous agent composes flexible tools — write schema (FAQPage/HowTo/Organization JSON-LD), rewrite content answer-first, fix meta, set robots, create redirects — to close the gaps it found.
+4. **Verify + keep/rollback.** Every change is snapshotted, then the targeted searches are re-measured. A clean win is kept; anything that doesn't help is **automatically reverted**.
+5. **Remember.** Every outcome is written to an experiment memory (SQL + vector recall), so the agent never repeats a dead end or redoes a win.
+
+This runs as a **daily batch** per site. The safety mechanism for "fully autonomous" is reversibility: nothing survives that didn't measurably improve visibility.
+
+## Works on any site
+
+- **Shopify** — OAuth, writes to the theme / pages / metafields (with before/after diffs + one-click rollback, described below).
+- **Any custom site / landing page** — the agent crawls it, and the changes are delivered via **[`@autoaeo/sdk`](packages/sdk)** (runtime injection in Next.js/any app) or **`npx autoaeo build`** (build-time artifacts for static/JAMstack sites). Startups and hand-coded sites get the same agent.
+
+## Try the visibility scan (no setup)
+
+```bash
+npm run scan -- --business "a plumber in Columbus, Ohio" \
+                --brand "The Eco Plumbers" --domain ecoplumbers.com
+```
+
+Prints, for any business: appearance rate across live AI searches, per-search who-ranks, the competitors beating you, and strategy-grounded recommendations. (`npm run loop -- --site <id>` runs the full apply/measure/rollback cycle against a connected site.)
+
+Requires `OPENAI_API_KEY` in `.env.local`. Engines are pluggable (`MEASUREMENT_ENGINES`); OpenAI's grounded `search-preview` model is the default.
+
+---
+
+## Shopify machine layer (Pillar 1)
+
+AutoAEO also connects to your Shopify store via OAuth and publishes a clean, machine-readable version alongside your existing storefront. Your customers still see your theme; AI agents — guided by `/llms.txt`, `<link rel="alternate">`, and an AI-friendly `robots.txt` — are routed to a stripped-down, structured version built for them to parse and quote. Every change is shown as a before/after diff and can be rolled back in one click.
 
 ---
 
