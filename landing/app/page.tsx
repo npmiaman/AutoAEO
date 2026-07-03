@@ -6,7 +6,7 @@ import GetStartedCard from "./GetStartedCard";
 import Faqs from "./Faqs";
 import ProblemScroll from "./ProblemScroll";
 import ContactPopup from "./ContactPopup";
-import RotatingBox from "./RotatingBox";
+import PixelPigeon from "./PixelPigeon";
 import { useEffect, useState } from "react";
 
 const SIGNUP_URL = process.env.NEXT_PUBLIC_SIGNUP_URL ?? "https://app.pigeon.dev/signup";
@@ -35,7 +35,8 @@ export default function Home() {
     <main className="landing">
       <nav className={`nav${scrolled ? " scrolled" : ""}`}>
         <a className="brand" href="#top">
-          <Brand />
+          <PixelPigeon size={26} />
+          <span><Brand /></span>
         </a>
         <div className="nav-right">
           <a className="nav-link" href="#how">How it works</a>
@@ -50,7 +51,7 @@ export default function Home() {
       <section className="hero" id="top">
         <span className="hero-eyebrow">The autonomous AEO + SEO agent</span>
         <h1>
-          <RotatingBox />
+          <span className="hero-pigeon"><PixelPigeon size={76} /></span>
           <span className="mw"><Brand /></span> gets your site
           <br />
           recommended by AI
@@ -116,7 +117,7 @@ export default function Home() {
       <footer className="foot">
         <div className="foot-left">
           <div className="foot-brandrow">
-            <RotatingBox />
+            <PixelPigeon size={30} />
             <span className="foot-brand">
               <Brand />
             </span>

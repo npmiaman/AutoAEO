@@ -147,7 +147,17 @@ button.nav-link {
   letter-spacing: 1px;
   color: var(--ink);
   transition: color 0.45s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42em;
 }
+.brand canvas, .foot-brandrow canvas { display: block; }
+.hero-pigeon {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 0 0.32em 0.14em 0;
+}
+.hero-pigeon canvas { display: block; }
 .brand-br { color: var(--ink); }
 
 /* shadcn-style button: solid black, white text */
