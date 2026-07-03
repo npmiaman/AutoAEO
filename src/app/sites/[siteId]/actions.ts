@@ -7,7 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { site as siteTable } from "@/lib/db/schema";
-import { startBatchScan } from "@/lib/agent/measurement/batch-scan";
+import { startScan } from "@/lib/agent/measurement/batch-scan";
 
 export async function runScan(siteId: string): Promise<void> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -20,8 +20,8 @@ export async function runScan(siteId: string): Promise<void> {
     .limit(1);
   if (!owned) redirect("/dashboard");
 
-  // Submit all searches as one OpenAI Batch job (async). The dashboard polls
-  // and finalizes when the batch completes.
-  await startBatchScan(siteId);
+  // First scan runs live (results appear immediately); later scans go up as one
+  // async OpenAI Batch job that the dashboard polls and finalizes.
+  await startScan(siteId);
   revalidatePath(`/sites/${siteId}`);
 }

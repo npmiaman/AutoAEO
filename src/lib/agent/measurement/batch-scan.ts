@@ -2,11 +2,11 @@ import "server-only";
 import { and, desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/lib/db";
-import { scanJob, site as siteTable } from "@/lib/db/schema";
+import { measurement, scanJob, site as siteTable } from "@/lib/db/schema";
 import { parseSiteConfig } from "@/lib/agent/site/config";
 import { generateSearchIdeas } from "./searches";
 import { submitSearchBatch, retrieveSearchBatch } from "./engines/openai-batch";
-import { finalizeScan } from "./harness";
+import { finalizeScan, runVisibilityScan } from "./harness";
 
 // ─────────────────────────────────────────────────────────────────────
 // Async batch scan. All grounded searches for a site go up as ONE OpenAI Batch
@@ -31,6 +31,52 @@ export async function runningScanJob(siteId: string): Promise<JobRow | null> {
     .orderBy(desc(scanJob.createdAt))
     .limit(1);
   return j ?? null;
+}
+
+/** Has this site ever produced a measurement? */
+async function hasPriorScan(siteId: string): Promise<boolean> {
+  const [m] = await db
+    .select({ id: measurement.id })
+    .from(measurement)
+    .where(eq(measurement.siteId, siteId))
+    .limit(1);
+  return !!m;
+}
+
+/**
+ * Kick off a scan, choosing HOW based on whether it's the site's first one:
+ *   - first scan  → run synchronously so onboarding shows results immediately.
+ *   - every scan after → OpenAI Batch API (async, ~50% cheaper, cadence-friendly).
+ * Returns which path ran; batch path also returns the tracking jobId.
+ */
+export async function startScan(
+  siteId: string,
+): Promise<{ mode: "sync" | "batch"; jobId?: string }> {
+  const existing = await runningScanJob(siteId);
+  if (existing) return { mode: "batch", jobId: existing.id };
+
+  if (await hasPriorScan(siteId)) {
+    const { jobId } = await startBatchScan(siteId);
+    return { mode: "batch", jobId };
+  }
+
+  // First scan: run it live.
+  const [s] = await db
+    .select()
+    .from(siteTable)
+    .where(eq(siteTable.id, siteId))
+    .limit(1);
+  if (!s) throw new Error(`Site not found: ${siteId}`);
+
+  await runVisibilityScan({
+    siteId,
+    brandName: s.name,
+    primaryDomain: s.primaryDomain,
+    business: siteBusiness(s),
+    analyzeCompetitors: 3,
+    persist: true,
+  });
+  return { mode: "sync" };
 }
 
 /**

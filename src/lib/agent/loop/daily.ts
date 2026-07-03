@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { measurement } from "@/lib/db/schema";
 import {
   runningScanJob,
-  startBatchScan,
+  startScan,
   finalizeScanJob,
 } from "@/lib/agent/measurement/batch-scan";
 
@@ -53,7 +53,8 @@ export async function runScanCadenceForSite(
   const dueMs = CADENCE_DAYS * 86_400_000;
   const isDue = !latest || Date.now() - latest.createdAt.getTime() > dueMs;
   if (isDue) {
-    await startBatchScan(siteId);
+    // First scan runs live; later ones go up as a batch job.
+    await startScan(siteId);
     return { siteId, action: "submitted" };
   }
 
