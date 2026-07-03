@@ -171,7 +171,7 @@ export function ScanReport({
                     : 0;
                   return (
                     <div key={comp.name} className="flex items-center gap-3">
-                      <CompetitorLogo domain={comp.domain} name={comp.name} />
+                      <CompetitorLogo src={comp.logoUrl} name={comp.name} />
                       <span className="w-24 shrink-0 truncate text-sm sm:w-32">
                         {comp.name}
                       </span>

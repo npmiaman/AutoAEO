@@ -3,22 +3,21 @@
 import { useState } from "react";
 
 /**
- * Competitor logo — tries a real brand logo (Clearbit) keyed by domain, falls
- * back to the favicon service, then to a monogram. All client-side so a broken
- * image degrades gracefully.
+ * Competitor logo. `src` is the logo URL extracted during competitor analysis
+ * (server-side). Falls back to a monogram if it's missing or fails to load.
  */
 export function CompetitorLogo({
-  domain,
+  src,
   name,
   size = 20,
 }: {
-  domain?: string;
+  src?: string;
   name: string;
   size?: number;
 }) {
-  const [stage, setStage] = useState<0 | 1 | 2>(domain ? 0 : 2);
+  const [failed, setFailed] = useState(false);
 
-  if (stage === 2 || !domain) {
+  if (!src || failed) {
     return (
       <span
         className="flex shrink-0 items-center justify-center rounded bg-muted text-[10px] font-semibold text-muted-foreground"
@@ -30,11 +29,6 @@ export function CompetitorLogo({
     );
   }
 
-  const src =
-    stage === 0
-      ? `https://logo.clearbit.com/${domain}`
-      : `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -44,7 +38,7 @@ export function CompetitorLogo({
       height={size}
       className="shrink-0 rounded bg-muted object-contain"
       style={{ width: size, height: size }}
-      onError={() => setStage((s) => (s === 0 ? 1 : 2))}
+      onError={() => setFailed(true)}
     />
   );
 }

@@ -53,8 +53,14 @@ export interface CompetitiveMap {
   ourAppearances: number;
   rankings: QueryRanking[]; // who ranks where, per query
   // Factual sets — which queries each competitor ranks on (NO percentage score).
-  // `domain` is resolved from the cited sources for logo display.
-  competitors: Array<{ name: string; ranksOn: string[]; domain?: string }>;
+  // `domain` is resolved from cited sources; `logoUrl` is extracted from their
+  // site during competitor analysis (see resolveCompetitorLogos).
+  competitors: Array<{
+    name: string;
+    ranksOn: string[];
+    domain?: string;
+    logoUrl?: string;
+  }>;
   strongCompetitors: string[]; // recurring winners (context for focus signals)
   focus: FocusSignals;
   // Search demand keyed by query — attached after the map is built. Focus
@@ -272,4 +278,68 @@ Return ONLY JSON: {"factors": ["..."], "howToBeat": ["..."]}`;
   } catch {
     return { name: args.name, url, ranksOn: args.ranksOn.slice(0, 4), factors: [], howToBeat: [] };
   }
+}
+
+// ─── Logo extraction — part of competitor analysis ───────────────────
+//
+// For the top competitors, fetch their site and extract the actual brand logo
+// (apple-touch-icon → <link rel="icon"> → favicon service fallback). Stored as
+// logoUrl so the dashboard displays a real logo, not a guessed favicon.
+
+async function fetchHtml(url: string): Promise<string | null> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Pigeon-Bot/1.0 (+https://pigeon.com/bot)" },
+      redirect: "follow",
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
+  }
+}
+
+function absolutize(href: string, base: string): string {
+  try {
+    return new URL(href, base).toString();
+  } catch {
+    return href;
+  }
+}
+
+async function resolveLogo(domain: string): Promise<string> {
+  const base = `https://${domain}/`;
+  const html = await fetchHtml(base);
+  if (html) {
+    const links = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]);
+    const hrefOf = (tag: string) => tag.match(/href=["']([^"']+)["']/i)?.[1];
+    // Prefer apple-touch-icon (a square brand logo), then any rel="icon".
+    const apple = links.find(
+      (t) => /rel=["'][^"']*apple-touch-icon/i.test(t) && hrefOf(t),
+    );
+    if (apple) return absolutize(hrefOf(apple)!, base);
+    const icon = links.find(
+      (t) => /rel=["'][^"']*\bicon\b/i.test(t) && hrefOf(t),
+    );
+    if (icon) return absolutize(hrefOf(icon)!, base);
+  }
+  // Reliable fallback — always returns an image.
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+}
+
+/** Extract logos for the top `count` competitors (mutates the map in place). */
+export async function resolveCompetitorLogos(
+  map: CompetitiveMap,
+  count = 8,
+): Promise<void> {
+  const targets = map.competitors.slice(0, count).filter((c) => c.domain);
+  await Promise.all(
+    targets.map(async (c) => {
+      c.logoUrl = await resolveLogo(c.domain!);
+    }),
+  );
 }

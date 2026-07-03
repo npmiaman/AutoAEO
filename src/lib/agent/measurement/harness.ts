@@ -11,6 +11,7 @@ import {
   buildCompetitiveMap,
   applyDemand,
   analyzeCompetitorBasis,
+  resolveCompetitorLogos,
   type CompetitiveMap,
 } from "./competitors";
 import { fetchQueryVolumes } from "@/lib/agent/volume";
@@ -188,6 +189,9 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
       (c) => analyzeCompetitorBasis({ name: c.name, ranksOn: c.ranksOn, outcomes }),
     );
   }
+
+  // Extract the top competitors' logos (fetch their site → real brand logo).
+  await resolveCompetitorLogos(competitors, 8);
 
   // 4. Diagnose the win/loss split, prioritizing the quick-win whitespace.
   const diagnosis = await diagnose({
