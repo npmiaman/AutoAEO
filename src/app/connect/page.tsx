@@ -40,8 +40,8 @@ export default function ConnectPage() {
           Connect a Shopify store
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          You&apos;ll be redirected to Shopify to approve the AutoAEO app.
-          AutoAEO needs read/write access to your products, theme, and online
+          You&apos;ll be redirected to Shopify to approve the Pigeon app.
+          Pigeon needs read/write access to your products, theme, and online
           store content.
         </p>
       </div>
@@ -86,7 +86,7 @@ export default function ConnectPage() {
             partners.shopify.com
           </a>{" "}
           → Stores → Add store → Development store. It has full API access for
-          $0 and lets you safely test AutoAEO before pointing it at a live
+          $0 and lets you safely test Pigeon before pointing it at a live
           store.
         </p>
       </div>

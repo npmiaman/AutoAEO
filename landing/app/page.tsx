@@ -9,7 +9,9 @@ import ContactPopup from "./ContactPopup";
 import PixelPigeon from "./PixelPigeon";
 import { useEffect, useState } from "react";
 
-const SIGNUP_URL = process.env.NEXT_PUBLIC_SIGNUP_URL ?? "https://app.pigeon.dev/signup";
+// Points at the Pigeon product app's real signup. Override per-env:
+//   NEXT_PUBLIC_SIGNUP_URL=https://app.pigeon.dev/signup
+const SIGNUP_URL = process.env.NEXT_PUBLIC_SIGNUP_URL ?? "http://localhost:3000/signup";
 const CONTACT_EMAIL = "hello@pigeon.dev";
 
 function Brand() {

@@ -47,9 +47,9 @@ export function DashboardShell({
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
           <div className="flex items-center gap-6">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="size-5 rounded-sm bg-foreground" />
+              <span className="text-base" aria-hidden>🐦</span>
               <span className="text-sm font-semibold tracking-tight">
-                AutoAEO
+                Pigeon
               </span>
             </Link>
             <nav className="hidden items-center gap-1 md:flex">

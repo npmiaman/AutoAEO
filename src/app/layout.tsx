@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AutoAEO — AI-search optimization for Shopify",
+  title: "Pigeon — get your site recommended by AI",
   description:
-    "Auto-generate machine-readable layers, schema markup, and AEO-optimized sections so AI search engines surface your store.",
+    "The autonomous AEO + SEO agent. Pigeon finds where you're invisible to ChatGPT, Perplexity, and Gemini, fixes what's missing, and proves it worked — on Shopify or any site.",
 };
 
 export default function RootLayout({

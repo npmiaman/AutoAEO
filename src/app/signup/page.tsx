@@ -39,7 +39,7 @@ export default function SignUpPage() {
       <div className="w-full max-w-sm space-y-8">
         <div className="space-y-2 text-center">
           <Link href="/" className="text-sm text-muted-foreground hover:underline">
-            ← AutoAEO
+            ← 🐦 Pigeon
           </Link>
           <h1 className="text-2xl font-semibold tracking-tight">
             Create your account
