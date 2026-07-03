@@ -29,7 +29,7 @@ export interface RobotsPayload {
 // kind: "structured_data" — JSON-LD bound to a resource (schema.org).
 export interface StructuredDataPayload {
   ownerId: string; // resource gid the schema describes
-  namespace: string; // e.g. "autoaeo"
+  namespace: string; // e.g. "pigeon"
   key: string; // e.g. "schema"
   json: unknown; // the JSON-LD object
 }

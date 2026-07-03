@@ -56,7 +56,7 @@ export async function ensureSiteForShop(shopId: string): Promise<string> {
 
 /**
  * Provision a generic (non-Shopify) site from a URL. Returns the site id and
- * the API key the @autoaeo/sdk / CLI will authenticate with. Idempotent per
+ * the API key the @pigeon/sdk / CLI will authenticate with. Idempotent per
  * (user, domain).
  */
 export async function provisionGenericSite(args: {

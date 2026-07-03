@@ -16,7 +16,7 @@ import { buildChatModel } from "@/lib/agent/llm";
 //      JSON-LD entity (without @context) ready to drop into the
 //      schema snippet's @graph.
 //
-// The output entity is stored as the autoaeo.schema_extra metafield
+// The output entity is stored as the pigeon.schema_extra metafield
 // on its owner; the snippet renders it conditionally.
 // ─────────────────────────────────────────────────────────────────────
 

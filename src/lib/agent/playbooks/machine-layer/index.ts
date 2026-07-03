@@ -218,7 +218,7 @@ export const machineLayerPlaybook: Playbook = {
       theme.id,
       "layout/theme.liquid",
     );
-    if (themeLiquid && !themeLiquid.includes("autoaeo-alternate")) {
+    if (themeLiquid && !themeLiquid.includes("pigeon-alternate")) {
       proposals.push({
         kind: "snippet_inject",
         target: "layout/theme.liquid",
@@ -253,12 +253,12 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
-const ALTERNATE_SNIPPET = `<!-- autoaeo-alternate -->
+const ALTERNATE_SNIPPET = `<!-- pigeon-alternate -->
 {%- unless request.path contains '?view=machine' or template contains 'machine' -%}
   {%- assign machine_url = canonical_url | append: '?view=machine' -%}
   <link rel="alternate" type="text/markdown" title="Machine-readable version" href="{{ machine_url }}">
 {%- endunless -%}
-<!-- /autoaeo-alternate -->`;
+<!-- /pigeon-alternate -->`;
 
 function injectAlternateLink(themeLiquid: string): string {
   // Inject just before </head>. If </head> isn't found (rare), append.

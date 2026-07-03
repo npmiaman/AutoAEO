@@ -6,7 +6,7 @@ import {
   fetchThemeAssetText,
 } from "@/lib/agent/playbooks/machine-layer/queries";
 import {
-  AUTOAEO_SCHEMA_SNIPPET,
+  PIGEON_SCHEMA_SNIPPET,
   injectSchemaRender,
   themeLiquidHasSchemaInjection,
 } from "./generator";
@@ -18,15 +18,15 @@ import { enrichSchema } from "./enricher";
 // Two layers:
 //
 //   A) Deterministic site-wide JSON-LD via Liquid snippet
-//      - snippets/autoaeo-schema.liquid (Organization, WebSite, Product,
+//      - snippets/pigeon-schema.liquid (Organization, WebSite, Product,
 //        BreadcrumbList, CollectionPage, BlogPosting, WebPage, FAQPage)
-//      - {% render 'autoaeo-schema' %} injected into theme.liquid <head>
+//      - {% render 'pigeon-schema' %} injected into theme.liquid <head>
 //
 //   B) LLM enrichment per resource (Gemini)
 //      - For pages, articles, and richly-described products: classify
 //        whether a richer schema.org type applies (Recipe, HowTo,
 //        Course, Service, Event, etc.) and extract structured data.
-//      - Output JSON-LD entity is stored as autoaeo.schema_extra
+//      - Output JSON-LD entity is stored as pigeon.schema_extra
 //        metafield on the resource.
 //      - The snippet conditionally emits this metafield as an
 //        additional @graph member.
@@ -61,23 +61,23 @@ export const schemaMarkupPlaybook: Playbook = {
 
     // ── Layer A: deterministic snippet + theme.liquid inject ─────────
 
-    const snippetKey = "snippets/autoaeo-schema.liquid";
+    const snippetKey = "snippets/pigeon-schema.liquid";
     const existingSnippet = await fetchThemeAssetText(
       shopify,
       theme.id,
       snippetKey,
     );
-    if (existingSnippet !== AUTOAEO_SCHEMA_SNIPPET) {
+    if (existingSnippet !== PIGEON_SCHEMA_SNIPPET) {
       proposals.push({
         kind: "theme_asset",
         target: snippetKey,
         title: "Schema.org JSON-LD snippet",
         description:
           existingSnippet == null
-            ? "Create the dynamic schema generator. Emits Organization, WebSite, Product, BreadcrumbList, CollectionPage, BlogPosting, WebPage, and FAQPage as JSON-LD. Reads autoaeo.schema_extra metafields for LLM-enriched per-resource schema."
-            : "Update the schema generator (now reads autoaeo.schema_extra metafields for LLM-enriched per-resource schema in addition to existing types).",
+            ? "Create the dynamic schema generator. Emits Organization, WebSite, Product, BreadcrumbList, CollectionPage, BlogPosting, WebPage, and FAQPage as JSON-LD. Reads pigeon.schema_extra metafields for LLM-enriched per-resource schema."
+            : "Update the schema generator (now reads pigeon.schema_extra metafields for LLM-enriched per-resource schema in addition to existing types).",
         before: existingSnippet ?? null,
-        after: AUTOAEO_SCHEMA_SNIPPET,
+        after: PIGEON_SCHEMA_SNIPPET,
       });
     }
 
@@ -93,7 +93,7 @@ export const schemaMarkupPlaybook: Playbook = {
         target: themeLiquidKey,
         title: "Render schema snippet in <head>",
         description:
-          "Adds {% render 'autoaeo-schema' %} just before </head> so JSON-LD is emitted on every page.",
+          "Adds {% render 'pigeon-schema' %} just before </head> so JSON-LD is emitted on every page.",
         before: existingThemeLiquid,
         after: injectSchemaRender(existingThemeLiquid),
       });
@@ -169,7 +169,7 @@ export const schemaMarkupPlaybook: Playbook = {
 
           proposals.push({
             kind: "metafield_set",
-            target: `${r.gid}:autoaeo.schema_extra`,
+            target: `${r.gid}:pigeon.schema_extra`,
             title: `Add ${result.schemaType} schema: ${r.title}`,
             description: `${result.reasoning}\n\nThe Schema Markup snippet automatically emits this entity as JSON-LD on the resource's page.`,
             before: r.existingExtra
@@ -245,12 +245,12 @@ async function fetchEnrichableResources(client: ShopifyClient): Promise<{
       };
     }>(
       /* GraphQL */ `
-        query AutoAEO_PagesForEnrichment($first: Int!) {
+        query Pigeon_PagesForEnrichment($first: Int!) {
           pages(first: $first, sortKey: UPDATED_AT, reverse: true) {
             edges {
               node {
                 id handle title body
-                metafield(namespace: "autoaeo", key: "schema_extra") { value }
+                metafield(namespace: "pigeon", key: "schema_extra") { value }
               }
             }
           }
@@ -273,13 +273,13 @@ async function fetchEnrichableResources(client: ShopifyClient): Promise<{
       };
     }>(
       /* GraphQL */ `
-        query AutoAEO_ArticlesForEnrichment($first: Int!) {
+        query Pigeon_ArticlesForEnrichment($first: Int!) {
           articles(first: $first, sortKey: PUBLISHED_AT, reverse: true) {
             edges {
               node {
                 id handle title body
                 blog { handle }
-                metafield(namespace: "autoaeo", key: "schema_extra") { value }
+                metafield(namespace: "pigeon", key: "schema_extra") { value }
               }
             }
           }
@@ -301,12 +301,12 @@ async function fetchEnrichableResources(client: ShopifyClient): Promise<{
       };
     }>(
       /* GraphQL */ `
-        query AutoAEO_ProductsForEnrichment($first: Int!) {
+        query Pigeon_ProductsForEnrichment($first: Int!) {
           products(first: $first, query: "status:active", sortKey: UPDATED_AT, reverse: true) {
             edges {
               node {
                 id handle title description
-                metafield(namespace: "autoaeo", key: "schema_extra") { value }
+                metafield(namespace: "pigeon", key: "schema_extra") { value }
               }
             }
           }

@@ -27,7 +27,7 @@ import { triageFindings, type RawFinding, type TriagedFinding } from "./triage";
 // ─────────────────────────────────────────────────────────────────────
 
 const AI_CRAWLER_UA =
-  "Mozilla/5.0 (compatible; AutoAEO/1.0; +https://autoaeo.app/bot)";
+  "Mozilla/5.0 (compatible; Pigeon/1.0; +https://pigeon.app/bot)";
 const HOP_LIMIT = 5;
 const SAMPLE_SIZE = 30;
 

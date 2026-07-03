@@ -9,7 +9,7 @@ import type { SiteResource } from "./adapter";
 // or landing page without a headless browser.
 // ─────────────────────────────────────────────────────────────────────
 
-const UA = "AutoAEO-Bot/1.0 (+https://autoaeo.com/bot)";
+const UA = "Pigeon-Bot/1.0 (+https://pigeon.com/bot)";
 const MAX_PAGES = Number(process.env.CRAWL_MAX_PAGES ?? 25);
 const FETCH_TIMEOUT_MS = 12_000;
 

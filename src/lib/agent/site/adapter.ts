@@ -12,8 +12,8 @@ import "server-only";
 //
 // Implementations:
 //   - ShopifyAdapter   → Admin GraphQL/REST + theme Asset API      (this repo)
-//   - GenericSiteAdapter → HTTP crawl + AutoAEO-hosted machine layer (Phase 5)
-//   - SdkAdapter       → artifacts served by @autoaeo/sdk at runtime (Phase 5)
+//   - GenericSiteAdapter → HTTP crawl + Pigeon-hosted machine layer (Phase 5)
+//   - SdkAdapter       → artifacts served by @pigeon/sdk at runtime (Phase 5)
 // ─────────────────────────────────────────────────────────────────────
 
 export type SitePlatform = "shopify" | "generic" | "sdk";

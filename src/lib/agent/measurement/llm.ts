@@ -3,7 +3,7 @@ import "server-only";
 // ─────────────────────────────────────────────────────────────────────
 // Provider-agnostic text generation for the measurement layer.
 //
-// The rest of AutoAEO is Gemini-centric, but synthetic testing must be able
+// The rest of Pigeon is Gemini-centric, but synthetic testing must be able
 // to run on OpenAI alone (Gemini gated off). This picks a provider by which
 // key is present — OpenAI first — so query generation never hard-depends on
 // Google. Kept local to measurement; the wider LLM migration is separate.

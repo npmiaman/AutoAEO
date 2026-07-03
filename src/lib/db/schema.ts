@@ -69,7 +69,7 @@ export const verification = sqliteTable("verification", {
 });
 
 // ─────────────────────────────────────────────────────────────
-// AutoAEO domain tables
+// Pigeon domain tables
 // ─────────────────────────────────────────────────────────────
 
 // A connected Shopify shop owned by a user. Tokens encrypted at rest.
@@ -108,7 +108,7 @@ export const agentRun = sqliteTable("agent_run", {
 });
 
 // ─────────────────────────────────────────────────────────────
-// AutoAEO v2 — platform-agnostic sites + autonomous loop + memory
+// Pigeon v2 — platform-agnostic sites + autonomous loop + memory
 //
 // `shop` above stays the Shopify-specific record (OAuth token, domain).
 // `site` generalizes it: one row per optimizable site regardless of
@@ -141,7 +141,7 @@ export const site = sqliteTable("site", {
 
 // Artifacts the agent produced for a non-Shopify (generic/sdk) site. Since we
 // can't write to a site we don't own, changes are stored here and served to the
-// @autoaeo/sdk or CLI, which injects them at runtime / build time. One active
+// @pigeon/sdk or CLI, which injects them at runtime / build time. One active
 // row per (site, kind, target); snapshot/revert toggle `active` + prior payload.
 export const siteArtifact = sqliteTable("site_artifact", {
   id: text("id").primaryKey(),

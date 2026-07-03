@@ -7,7 +7,7 @@ import {
 } from "@/lib/shopify/oauth";
 import { SHOPIFY_SCOPE_STRING } from "@/lib/shopify/scopes";
 
-// Initiates the Shopify OAuth flow. The user must be signed in to AutoAEO.
+// Initiates the Shopify OAuth flow. The user must be signed in to Pigeon.
 // Query: ?shop=mystore.myshopify.com
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: req.headers });

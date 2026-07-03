@@ -141,7 +141,7 @@ function systemPrompt(
         .map((l) => `- (${l.verdict ?? "?"}) ${l.notes}`)
         .join("\n")
     : "- (no prior attempts recorded)";
-  return `You are AutoAEO's autonomous optimization agent for the site "${site.name}" (${site.primaryDomain}), platform: ${site.platform}.
+  return `You are Pigeon's autonomous optimization agent for the site "${site.name}" (${site.primaryDomain}), platform: ${site.platform}.
 
 Your job: make this site show up more often when people ask AI assistants (ChatGPT etc.) questions in its space, by making real changes to it via your tools. Follow this playbook — recommend/act on the high-impact levers, not folklore:
 

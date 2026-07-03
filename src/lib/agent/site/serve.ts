@@ -9,7 +9,7 @@ import type {
 } from "./payloads";
 
 // ─────────────────────────────────────────────────────────────────────
-// Serve — aggregate a site's active artifacts into the shape the @autoaeo/sdk
+// Serve — aggregate a site's active artifacts into the shape the @pigeon/sdk
 // and CLI consume. The SDK looks up the current request path in `byPath` to
 // inject meta tags + JSON-LD, and serves `llmsTxt` at /llms.txt.
 // ─────────────────────────────────────────────────────────────────────

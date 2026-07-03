@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // 2. Verify state cookie matches and extract the AutoAEO user id.
+  // 2. Verify state cookie matches and extract the Pigeon user id.
   const cookie = req.cookies.get("shopify_oauth_state")?.value;
   if (!cookie) {
     return NextResponse.json(

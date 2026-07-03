@@ -1,6 +1,6 @@
 # AEO + SEO Strategy Brief (July 2026)
 
-> This is the source-of-truth strategy the AutoAEO agent follows. The distilled,
+> This is the source-of-truth strategy the Pigeon agent follows. The distilled,
 > machine-consumed version lives in [`src/lib/agent/strategy/index.ts`](../src/lib/agent/strategy/index.ts)
 > (`STRATEGY_BRIEF` + `PLAYBOOK_ACTIONS`), which is injected into the agent's
 > diagnosis and planning prompts. Keep the two in sync when this changes.
@@ -133,4 +133,4 @@ content, not a missing technical tweak.
 - Distribution and being talked about elsewhere matters as much as on-page work.
 - llms.txt is a nice-to-have, not a strategy.
 - Measurement is the most commonly skipped step — most teams don't know their
-  real AI-citation rate. (This is AutoAEO's wedge.)
+  real AI-citation rate. (This is Pigeon's wedge.)

@@ -25,12 +25,7 @@ export default function GetStartedCard({ signupUrl }: Props) {
           </div>
         </div>
 
-        <a
-          className="btn btn-primary start-btn"
-          href={signupUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a className="btn btn-primary start-btn" href={signupUrl}>
           Run my free scan
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M5 12h14" />

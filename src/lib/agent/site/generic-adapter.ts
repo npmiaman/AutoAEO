@@ -17,7 +17,7 @@ import { crawlSite } from "./crawl";
 // ─────────────────────────────────────────────────────────────────────
 // GenericSiteAdapter — for any non-Shopify site (marketing sites, custom
 // landing pages, startups). Reads by crawling; writes to the `site_artifact`
-// store because we don't own the site. The @autoaeo/sdk (runtime) and CLI
+// store because we don't own the site. The @pigeon/sdk (runtime) and CLI
 // (build time) fetch those artifacts and inject them into the real site.
 //
 // apply/snapshot/revert operate on the store, so the loop's keep/rollback
@@ -131,7 +131,7 @@ export class GenericSiteAdapter implements SiteAdapter {
       : `${this.opts.url}${path.startsWith("/") ? path : `/${path}`}`;
     try {
       const res = await fetch(url, {
-        headers: { "User-Agent": "AutoAEO-Bot/1.0 (+https://autoaeo.com/bot)" },
+        headers: { "User-Agent": "Pigeon-Bot/1.0 (+https://pigeon.com/bot)" },
         redirect: "follow",
       });
       return {

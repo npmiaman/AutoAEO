@@ -342,7 +342,7 @@ export class ShopifyAdapter implements SiteAdapter {
       ? path
       : `https://${primaryDomain}${path.startsWith("/") ? path : `/${path}`}`;
     const res = await fetch(url, {
-      headers: { "User-Agent": "AutoAEO-Bot/1.0 (+https://autoaeo.com/bot)" },
+      headers: { "User-Agent": "Pigeon-Bot/1.0 (+https://pigeon.com/bot)" },
       redirect: "follow",
     });
     return {

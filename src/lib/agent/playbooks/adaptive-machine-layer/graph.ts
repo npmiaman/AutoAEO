@@ -187,7 +187,7 @@ export async function runAdaptiveAgent(args: {
     {
       configurable: { thread_id: `adaptive-${args.shopId}-${Date.now()}` },
       runName: "AdaptiveMachineLayer",
-      tags: ["autoaeo", "adaptive-machine-layer"],
+      tags: ["pigeon", "adaptive-machine-layer"],
       metadata: { shopId: args.shopId },
     },
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import "@/app/marketing.css";
+import { useEffect, useState } from "react";
 import { BentoCard, ScanMock, FixMock, WhitespaceMock } from "./mocks";
 import { EnginesBentoCard } from "./PlatformLogos";
 import GetStartedCard from "./GetStartedCard";
@@ -7,11 +9,7 @@ import Faqs from "./Faqs";
 import ProblemScroll from "./ProblemScroll";
 import ContactPopup from "./ContactPopup";
 import PixelPigeon from "./PixelPigeon";
-import { useEffect, useState } from "react";
 
-// Points at the Pigeon product app's real signup. Override per-env:
-//   NEXT_PUBLIC_SIGNUP_URL=https://app.pigeon.dev/signup
-const SIGNUP_URL = process.env.NEXT_PUBLIC_SIGNUP_URL ?? "http://localhost:3000/signup";
 const CONTACT_EMAIL = "hello@pigeon.dev";
 
 function Brand() {
@@ -22,7 +20,7 @@ function Brand() {
   );
 }
 
-export default function Home() {
+export default function MarketingHome() {
   const [scrolled, setScrolled] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
 
@@ -43,10 +41,8 @@ export default function Home() {
         <div className="nav-right">
           <a className="nav-link" href="#how">How it works</a>
           <a className="nav-link" href="#problem">Why it matters</a>
-          <button type="button" className="nav-link" onClick={() => setContactOpen(true)}>
-            Contact
-          </button>
-          <a className="nav-cta" href="#install">Get started</a>
+          <a className="nav-link" href="/signin">Sign in</a>
+          <a className="nav-cta" href="/signup">Get started</a>
         </div>
       </nav>
 
@@ -66,7 +62,7 @@ export default function Home() {
         </p>
 
         <div className="cta">
-          <a className="btn btn-primary" href="#install">
+          <a className="btn btn-primary" href="/signup">
             Run a free scan
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M5 12h14" />
@@ -110,7 +106,7 @@ export default function Home() {
         <EnginesBentoCard />
       </section>
 
-      <GetStartedCard signupUrl={SIGNUP_URL} />
+      <GetStartedCard signupUrl="/signup" />
 
       <Faqs contactEmail={CONTACT_EMAIL} />
 

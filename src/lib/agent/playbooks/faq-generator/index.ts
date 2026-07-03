@@ -16,7 +16,7 @@ import {
 //
 // Reads existing pages + the shop's About content and uses Gemini to
 // extract / generate Q&A pairs. The output is stored as a JSON metafield
-// (`autoaeo.faq` on each Page) shaped exactly the way our Schema Markup
+// (`pigeon.faq` on each Page) shaped exactly the way our Schema Markup
 // playbook's snippet expects — so once both playbooks are applied,
 // every page emits FAQPage JSON-LD. FAQPage is the single biggest
 // AEO-citation win.
@@ -85,7 +85,7 @@ export const faqGeneratorPlaybook: Playbook = {
   id: "faq-generator",
   name: "FAQ Generator (AI)",
   description:
-    "Gemini extracts and generates a FAQPage-shaped Q&A set for each substantive page on your store, then writes it to the autoaeo.faq metafield. The Schema Markup playbook's snippet automatically emits the FAQPage JSON-LD wherever this metafield exists. Requires GOOGLE_API_KEY.",
+    "Gemini extracts and generates a FAQPage-shaped Q&A set for each substantive page on your store, then writes it to the pigeon.faq metafield. The Schema Markup playbook's snippet automatically emits the FAQPage JSON-LD wherever this metafield exists. Requires GOOGLE_API_KEY.",
 
   async run({ shopify }) {
     if (
@@ -147,7 +147,7 @@ export const faqGeneratorPlaybook: Playbook = {
 
         proposals.push({
           kind: "metafield_set",
-          target: `${page.pageGid}:autoaeo.faq`,
+          target: `${page.pageGid}:pigeon.faq`,
           title: `FAQ schema for "${page.title}" (${faqs.length} questions)`,
           description: `Generates a FAQPage-shaped Q&A set from this page's content. Once applied, the Schema Markup playbook's site-wide snippet automatically emits FAQPage JSON-LD on this page so AI engines can cite individual Q&A pairs.`,
           before,
@@ -233,7 +233,7 @@ async function fetchAllPagesWithBodyAndFaqMetafield(
   limit: number,
 ): Promise<PageWithMetafields[]> {
   // GraphQL pages query — gives us the gid (needed for metafields) +
-  // body + existing autoaeo.faq metafield in one round-trip.
+  // body + existing pigeon.faq metafield in one round-trip.
   const data = await client.graphql<{
     pages: {
       edges: Array<{
@@ -248,7 +248,7 @@ async function fetchAllPagesWithBodyAndFaqMetafield(
     };
   }>(
     /* GraphQL */ `
-      query AutoAEO_PagesWithFaq($first: Int!) {
+      query Pigeon_PagesWithFaq($first: Int!) {
         pages(first: $first, sortKey: UPDATED_AT, reverse: true) {
           edges {
             node {
@@ -256,7 +256,7 @@ async function fetchAllPagesWithBodyAndFaqMetafield(
               handle
               title
               body
-              metafield(namespace: "autoaeo", key: "faq") { value }
+              metafield(namespace: "pigeon", key: "faq") { value }
             }
           }
         }

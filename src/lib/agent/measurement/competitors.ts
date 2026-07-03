@@ -167,7 +167,7 @@ async function fetchPageText(url: string): Promise<string | null> {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 12_000);
     const res = await fetch(url, {
-      headers: { "User-Agent": "AutoAEO-Bot/1.0 (+https://autoaeo.com/bot)" },
+      headers: { "User-Agent": "Pigeon-Bot/1.0 (+https://pigeon.com/bot)" },
       redirect: "follow",
       signal: ctrl.signal,
     });

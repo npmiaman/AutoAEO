@@ -162,7 +162,7 @@ export async function updateProduct(
     productUpdate: { userErrors: Array<{ field: string[]; message: string }> };
   }>(
     /* GraphQL */ `
-      mutation AutoAEO_UpdateProduct($input: ProductInput!) {
+      mutation Pigeon_UpdateProduct($input: ProductInput!) {
         productUpdate(input: $input) {
           userErrors { field message }
         }
@@ -217,7 +217,7 @@ export interface MetafieldInput {
 }
 
 /**
- * Set a metafield on any resource. Used by FAQ Generator (autoaeo.faq json
+ * Set a metafield on any resource. Used by FAQ Generator (pigeon.faq json
  * on Page) and for misc structured data we want bound to specific entities.
  */
 export async function setMetafield(
@@ -230,7 +230,7 @@ export async function setMetafield(
     };
   }>(
     /* GraphQL */ `
-      mutation AutoAEO_SetMetafield($metafields: [MetafieldsSetInput!]!) {
+      mutation Pigeon_SetMetafield($metafields: [MetafieldsSetInput!]!) {
         metafieldsSet(metafields: $metafields) {
           userErrors { field message }
         }

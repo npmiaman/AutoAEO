@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-// autoaeo — build-time CLI for JAMstack / static sites.
+// pigeon — build-time CLI for JAMstack / static sites.
 //
-//   npx autoaeo build --key <apiKey> [--out public] [--base https://app.autoaeo.com]
+//   npx pigeon build --key <apiKey> [--out public] [--base https://app.pigeon.com]
 //
-// Fetches your site's AutoAEO artifacts and writes them into your build output:
+// Fetches your site's Pigeon artifacts and writes them into your build output:
 //   <out>/llms.txt              — the AI-readable index
-//   <out>/autoaeo-artifacts.json — per-route meta + JSON-LD, for your framework
+//   <out>/pigeon-artifacts.json — per-route meta + JSON-LD, for your framework
 //                                  to inline at build time
 //
-// Run it in your build step (e.g. "prebuild": "autoaeo build --key $AUTOAEO_KEY").
+// Run it in your build step (e.g. "prebuild": "pigeon build --key $PIGEON_KEY").
 
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -20,11 +20,11 @@ function arg(name, fallback) {
 }
 
 async function build() {
-  const key = arg("key", process.env.AUTOAEO_KEY);
+  const key = arg("key", process.env.PIGEON_KEY);
   const out = arg("out", "public");
-  const base = (arg("base", "https://app.autoaeo.com")).replace(/\/$/, "");
+  const base = (arg("base", "https://app.pigeon.com")).replace(/\/$/, "");
   if (!key) {
-    console.error("Missing --key (or AUTOAEO_KEY env).");
+    console.error("Missing --key (or PIGEON_KEY env).");
     process.exit(1);
   }
 
@@ -32,7 +32,7 @@ async function build() {
     headers: { Authorization: `Bearer ${key}` },
   });
   if (!res.ok) {
-    console.error(`AutoAEO API ${res.status}: ${await res.text()}`);
+    console.error(`Pigeon API ${res.status}: ${await res.text()}`);
     process.exit(1);
   }
   const artifacts = await res.json();
@@ -43,11 +43,11 @@ async function build() {
     console.log(`✓ wrote ${join(out, "llms.txt")}`);
   }
   await writeFile(
-    join(out, "autoaeo-artifacts.json"),
+    join(out, "pigeon-artifacts.json"),
     JSON.stringify(artifacts, null, 2),
     "utf8",
   );
-  console.log(`✓ wrote ${join(out, "autoaeo-artifacts.json")}`);
+  console.log(`✓ wrote ${join(out, "pigeon-artifacts.json")}`);
   const routes = Object.keys(artifacts.byPath ?? {}).length;
   console.log(
     `Done — ${routes} route(s) with meta/JSON-LD, llms.txt ${
@@ -63,10 +63,10 @@ if (cmd === "build") {
     process.exit(1);
   });
 } else {
-  console.log(`autoaeo — AI-search optimization
+  console.log(`pigeon — AI-search optimization
 
 Usage:
-  autoaeo build --key <apiKey> [--out public] [--base <url>]
+  pigeon build --key <apiKey> [--out public] [--base <url>]
 
-Get your API key by connecting your site at https://app.autoaeo.com.`);
+Get your API key by connecting your site at https://app.pigeon.com.`);
 }

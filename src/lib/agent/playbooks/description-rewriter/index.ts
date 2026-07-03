@@ -268,7 +268,7 @@ export const descriptionRewriterPlaybook: Playbook = {
       {
         configurable: { thread_id: `description-rewriter-${shopId}-${Date.now()}` },
         runName: "DescriptionRewriter",
-        tags: ["autoaeo", "description-rewriter"],
+        tags: ["pigeon", "description-rewriter"],
         metadata: { shopId },
       },
     );

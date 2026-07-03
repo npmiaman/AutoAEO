@@ -4,17 +4,17 @@
 // Produces a single Liquid snippet that emits the right JSON-LD per
 // page (Organization + WebSite globally; Product + BreadcrumbList on
 // product pages; CollectionPage on collections; BlogPosting on
-// articles; FAQPage when an autoaeo.faq metafield is present).
+// articles; FAQPage when an pigeon.faq metafield is present).
 //
 // All schema is generated dynamically by Liquid at request time using
 // the merchant's own data — no hardcoded values per store.
 // ─────────────────────────────────────────────────────────────────────
 
-export const AUTOAEO_SCHEMA_SNIPPET = `{%- comment -%}
-  AutoAEO — schema.org JSON-LD for search engines and AI agents.
+export const PIGEON_SCHEMA_SNIPPET = `{%- comment -%}
+  Pigeon — schema.org JSON-LD for search engines and AI agents.
   Emits Organization + WebSite on every page, plus per-template schema
   for products, collections, articles, and pages. FAQPage is emitted
-  when a page has an autoaeo.faq metafield (populated by FAQ playbook).
+  when a page has an pigeon.faq metafield (populated by FAQ playbook).
 {%- endcomment -%}
 <script type="application/ld+json">
 {
@@ -142,8 +142,8 @@ export const AUTOAEO_SCHEMA_SNIPPET = `{%- comment -%}
       },
       "description": {{ article.excerpt_or_content | strip_html | truncate: 3000 | json }}
     }
-    {%- if article.metafields.autoaeo.schema_extra -%}
-    ,{{ article.metafields.autoaeo.schema_extra.value }}
+    {%- if article.metafields.pigeon.schema_extra -%}
+    ,{{ article.metafields.pigeon.schema_extra.value }}
     {%- endif -%}
     {%- endif -%}
 
@@ -155,41 +155,41 @@ export const AUTOAEO_SCHEMA_SNIPPET = `{%- comment -%}
       "url": "{{ shop.url }}{{ page.url }}",
       "isPartOf": { "@id": "{{ shop.url }}#website" }
     }
-    {%- if page.metafields.autoaeo.faq -%}
+    {%- if page.metafields.pigeon.faq -%}
     ,{
       "@type": "FAQPage",
       "@id": "{{ shop.url }}{{ page.url }}#faq",
-      "mainEntity": {{ page.metafields.autoaeo.faq.value }}
+      "mainEntity": {{ page.metafields.pigeon.faq.value }}
     }
     {%- endif -%}
-    {%- if page.metafields.autoaeo.schema_extra -%}
-    ,{{ page.metafields.autoaeo.schema_extra.value }}
+    {%- if page.metafields.pigeon.schema_extra -%}
+    ,{{ page.metafields.pigeon.schema_extra.value }}
     {%- endif -%}
     {%- endif -%}
 
-    {%- if template contains 'product' and product and product.metafields.autoaeo.schema_extra -%}
-    ,{{ product.metafields.autoaeo.schema_extra.value }}
+    {%- if template contains 'product' and product and product.metafields.pigeon.schema_extra -%}
+    ,{{ product.metafields.pigeon.schema_extra.value }}
     {%- endif -%}
   ]
 }
 </script>
 `;
 
-const INJECT_MARKER = "<!-- autoaeo-schema -->";
+const INJECT_MARKER = "<!-- pigeon-schema -->";
 const INJECT_BLOCK = `${INJECT_MARKER}
-{% render 'autoaeo-schema' %}
-<!-- /autoaeo-schema -->`;
+{% render 'pigeon-schema' %}
+<!-- /pigeon-schema -->`;
 
 /**
  * Returns true if the merchant's theme.liquid already has our schema
  * snippet rendered. Lets the playbook skip a no-op proposal.
  */
 export function themeLiquidHasSchemaInjection(themeLiquid: string): boolean {
-  return themeLiquid.includes("autoaeo-schema");
+  return themeLiquid.includes("pigeon-schema");
 }
 
 /**
- * Inject `{% render 'autoaeo-schema' %}` immediately before </head>.
+ * Inject `{% render 'pigeon-schema' %}` immediately before </head>.
  */
 export function injectSchemaRender(themeLiquid: string): string {
   if (themeLiquidHasSchemaInjection(themeLiquid)) return themeLiquid;

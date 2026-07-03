@@ -1,4 +1,4 @@
-# AutoAEO
+# Pigeon
 
 **An autonomous SEO + AEO agent. It measures where your site shows up in AI search, fixes what's missing, verifies the fix actually helped, and remembers what worked — on Shopify or any custom-coded site.**
 
@@ -6,7 +6,7 @@
 
 ## What it does
 
-AI assistants (ChatGPT, Perplexity, Gemini) increasingly answer buying questions directly — and if they don't surface *you*, they surface a competitor. AutoAEO runs a continuous loop:
+AI assistants (ChatGPT, Perplexity, Gemini) increasingly answer buying questions directly — and if they don't surface *you*, they surface a competitor. Pigeon runs a continuous loop:
 
 1. **Measure (autoresearch).** It generates ~50 realistic searches a real person would type for your business (including adjacent ones), runs them against live, web-grounded AI engines, and reports — with no vanity score — **how often you show up, which searches you're invisible on, and exactly who's winning them instead.**
 2. **Diagnose.** An LLM, grounded in a real 2026 AEO/SEO strategy playbook ([docs/aeo-seo-strategy.md](docs/aeo-seo-strategy.md)), decodes *why* you win the searches you win and what's missing on the ones you don't.
@@ -19,7 +19,7 @@ This runs as a **daily batch** per site. The safety mechanism for "fully autonom
 ## Works on any site
 
 - **Shopify** — OAuth, writes to the theme / pages / metafields (with before/after diffs + one-click rollback, described below).
-- **Any custom site / landing page** — the agent crawls it, and the changes are delivered via **[`@autoaeo/sdk`](packages/sdk)** (runtime injection in Next.js/any app) or **`npx autoaeo build`** (build-time artifacts for static/JAMstack sites). Startups and hand-coded sites get the same agent.
+- **Any custom site / landing page** — the agent crawls it, and the changes are delivered via **[`@pigeon/sdk`](packages/sdk)** (runtime injection in Next.js/any app) or **`npx pigeon build`** (build-time artifacts for static/JAMstack sites). Startups and hand-coded sites get the same agent.
 
 ## Try the visibility scan (no setup)
 
@@ -36,17 +36,17 @@ Requires `OPENAI_API_KEY` in `.env.local`. Engines are pluggable (`MEASUREMENT_E
 
 ## Shopify machine layer (Pillar 1)
 
-AutoAEO also connects to your Shopify store via OAuth and publishes a clean, machine-readable version alongside your existing storefront. Your customers still see your theme; AI agents — guided by `/llms.txt`, `<link rel="alternate">`, and an AI-friendly `robots.txt` — are routed to a stripped-down, structured version built for them to parse and quote. Every change is shown as a before/after diff and can be rolled back in one click.
+Pigeon also connects to your Shopify store via OAuth and publishes a clean, machine-readable version alongside your existing storefront. Your customers still see your theme; AI agents — guided by `/llms.txt`, `<link rel="alternate">`, and an AI-friendly `robots.txt` — are routed to a stripped-down, structured version built for them to parse and quote. Every change is shown as a before/after diff and can be rolled back in one click.
 
 ---
 
 ## The problem in one paragraph
 
-Search engines have spent 25 years figuring out how to read messy HTML. AI engines are starting from scratch — and they prefer sites that hand them clean, structured data. When ChatGPT tries to answer "what's a good stainless-steel kitchen widget under $50," it has to wade through 1–3 MB of JavaScript, theme chrome, popups, and tracking pixels to find your product. Half the time it gives up and cites someone else. AutoAEO fixes this by giving AI agents their own purpose-built version of your store — without changing anything for human visitors.
+Search engines have spent 25 years figuring out how to read messy HTML. AI engines are starting from scratch — and they prefer sites that hand them clean, structured data. When ChatGPT tries to answer "what's a good stainless-steel kitchen widget under $50," it has to wade through 1–3 MB of JavaScript, theme chrome, popups, and tracking pixels to find your product. Half the time it gives up and cites someone else. Pigeon fixes this by giving AI agents their own purpose-built version of your store — without changing anything for human visitors.
 
 ## Before / after
 
-What the same `/products/widget` URL looks like to two different audiences after AutoAEO runs:
+What the same `/products/widget` URL looks like to two different audiences after Pigeon runs:
 
 | | **Human visitor** | **AI agent** |
 |---|---|---|
@@ -59,7 +59,7 @@ What the same `/products/widget` URL looks like to two different audiences after
 | Page weight | 1–3 MB | 5–15 KB |
 | Time to extract product info | Seconds (lossy) | Milliseconds (perfect) |
 
-## What AutoAEO ships to your store
+## What Pigeon ships to your store
 
 After running the **Machine Layer** playbook on a connected store and approving the proposed changes:
 
@@ -102,7 +102,7 @@ Storefront: https://acmekitchen.com
 - [Care guide](/pages/care?view=machine): How to keep your tools in top shape.
 
 ---
-_This page is the AI-readable index for this store. Generated by AutoAEO._
+_This page is the AI-readable index for this store. Generated by Pigeon._
 ```
 
 ## How it works
@@ -134,8 +134,8 @@ The full happy path takes about six clicks: sign up → enter store domain → i
 See [SETUP.md](./SETUP.md) for the complete walkthrough (Shopify Partner account → development store → Partner app → environment variables → connect).
 
 ```bash
-git clone https://github.com/amandilippandit/AutoAEO.git
-cd AutoAEO
+git clone https://github.com/amandilippandit/Pigeon.git
+cd Pigeon
 npm install
 cp .env.example .env.local       # then fill in SHOPIFY_API_KEY / SECRET / ANTHROPIC_API_KEY
 npm run db:push                  # apply schema to local SQLite
@@ -157,7 +157,7 @@ Open `http://localhost:3000` → sign up → connect a Shopify dev store.
 ## Project layout
 
 ```
-AutoAEO/
+Pigeon/
 ├── src/
 │   ├── app/                            Next.js App Router
 │   │   ├── (signin|signup)/

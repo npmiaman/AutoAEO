@@ -1,7 +1,7 @@
 {
-  "name": "@autoaeo/sdk",
+  "name": "@pigeon/sdk",
   "version": "0.1.0",
-  "description": "Make your site show up in AI search. Drop-in AEO/SEO for any site — injects the schema, meta, and llms.txt AutoAEO's agent generates for you.",
+  "description": "Make your site show up in AI search. Drop-in AEO/SEO for any site — injects the schema, meta, and llms.txt Pigeon's agent generates for you.",
   "type": "module",
   "main": "./src/index.js",
   "types": "./src/index.ts",
@@ -10,7 +10,7 @@
     "./next": "./src/next.ts"
   },
   "bin": {
-    "autoaeo": "./bin/cli.mjs"
+    "pigeon": "./bin/cli.mjs"
   },
   "files": ["src", "bin", "README.md"],
   "keywords": ["aeo", "geo", "seo", "ai-search", "llms.txt", "schema.org", "chatgpt"],

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { serveArtifactsByApiKey } from "@/lib/agent/site/serve";
 
 // ─────────────────────────────────────────────────────────────────────
-// Artifact delivery for the @autoaeo/sdk + CLI. Authenticated by the site's
+// Artifact delivery for the @pigeon/sdk + CLI. Authenticated by the site's
 // API key (Authorization: Bearer <key> or ?key=). Returns the aggregated
 // artifacts the SDK injects (meta, JSON-LD) and serves (llms.txt).
 //

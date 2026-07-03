@@ -9,7 +9,7 @@ import { buildEmbeddings, EMBEDDING_DIMENSIONS } from "./embeddings";
 // products as context (RAG-style, single-process).
 //
 // Why libsql vs a separate vector DB:
-//   - Same DB as the rest of AutoAEO (no extra infra to operate)
+//   - Same DB as the rest of Pigeon (no extra infra to operate)
 //   - libsql ships ANN indexes natively (no extra extension)
 //   - Works locally (file:./local.db) and on Turso for production
 //

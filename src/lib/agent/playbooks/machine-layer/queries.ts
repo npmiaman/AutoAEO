@@ -64,7 +64,7 @@ export async function fetchShopInfo(client: ShopifyClient): Promise<ShopInfo> {
       primaryDomain: { url: string; host: string };
     };
   }>(/* GraphQL */ `
-    query AutoAEO_ShopInfo {
+    query Pigeon_ShopInfo {
       shop {
         name
         description
@@ -110,7 +110,7 @@ export async function fetchProducts(
     };
   }>(
     /* GraphQL */ `
-      query AutoAEO_Products($first: Int!) {
+      query Pigeon_Products($first: Int!) {
         products(first: $first, query: "status:active", sortKey: UPDATED_AT, reverse: true) {
           edges {
             node {
@@ -173,7 +173,7 @@ export async function fetchCollections(
     };
   }>(
     /* GraphQL */ `
-      query AutoAEO_Collections($first: Int!) {
+      query Pigeon_Collections($first: Int!) {
         collections(first: $first, sortKey: UPDATED_AT, reverse: true) {
           edges {
             node {
@@ -250,7 +250,7 @@ export async function fetchArticles(
     };
   }>(
     /* GraphQL */ `
-      query AutoAEO_Articles($first: Int!) {
+      query Pigeon_Articles($first: Int!) {
         articles(first: $first, sortKey: PUBLISHED_AT, reverse: true) {
           edges {
             node {
@@ -289,7 +289,7 @@ export async function fetchPublishedTheme(
       }>;
     };
   }>(/* GraphQL */ `
-    query AutoAEO_PublishedTheme {
+    query Pigeon_PublishedTheme {
       themes(first: 20) {
         edges { node { id name role } }
       }

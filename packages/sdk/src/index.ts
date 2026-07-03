@@ -1,6 +1,6 @@
-// @autoaeo/sdk — framework-agnostic core.
+// @pigeon/sdk — framework-agnostic core.
 //
-// Fetches the artifacts AutoAEO's agent generated for your site and hands them
+// Fetches the artifacts Pigeon's agent generated for your site and hands them
 // to your app to inject: schema.org JSON-LD, better meta tags, and an llms.txt.
 // The agent does the thinking (what to add, measured against real AI-search
 // visibility); this SDK just applies the result at runtime or build time.
@@ -19,23 +19,23 @@ export interface ServedArtifacts {
   updatedAt: number;
 }
 
-export interface AutoAEOOptions {
+export interface PigeonOptions {
   apiKey: string;
-  /** AutoAEO API base. Defaults to the hosted service. */
+  /** Pigeon API base. Defaults to the hosted service. */
   baseUrl?: string;
   /** In-memory cache TTL for artifacts (ms). Default 5 min. */
   ttlMs?: number;
 }
 
-export interface AutoAEOClient {
+export interface PigeonClient {
   getArtifacts(): Promise<ServedArtifacts | null>;
   getRoute(path: string): Promise<RouteArtifacts | null>;
   getLlmsTxt(): Promise<string | null>;
 }
 
-const DEFAULT_BASE = "https://app.autoaeo.com";
+const DEFAULT_BASE = "https://app.pigeon.com";
 
-export function createAutoAEO(opts: AutoAEOOptions): AutoAEOClient {
+export function createPigeon(opts: PigeonOptions): PigeonClient {
   const base = (opts.baseUrl ?? DEFAULT_BASE).replace(/\/$/, "");
   const ttl = opts.ttlMs ?? 5 * 60_000;
 

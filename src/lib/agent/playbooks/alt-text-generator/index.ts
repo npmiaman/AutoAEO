@@ -188,7 +188,7 @@ async function fetchProductImagesMissingAlt(
     };
   }>(
     /* GraphQL */ `
-      query AutoAEO_ProductImages($first: Int!) {
+      query Pigeon_ProductImages($first: Int!) {
         products(first: $first, query: "status:active", sortKey: UPDATED_AT, reverse: true) {
           edges {
             node {

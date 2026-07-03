@@ -1,4 +1,4 @@
-// Scopes the AutoAEO app requests at install time.
+// Scopes the Pigeon app requests at install time.
 // These cover catalog edits, theme writes (sections, llms.txt, snippets),
 // page/blog/redirect content, files, and metaobjects for schema + machine layer.
 //

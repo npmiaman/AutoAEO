@@ -197,7 +197,7 @@ export function buildTools(): AgentTool[] {
       parameters: {
         type: "object",
         properties: {
-          key: { type: "string", description: "e.g. snippets/autoaeo-faq.liquid" },
+          key: { type: "string", description: "e.g. snippets/pigeon-faq.liquid" },
           value: { type: "string" },
         },
         required: ["key", "value"],
@@ -236,7 +236,7 @@ export function buildTools(): AgentTool[] {
       async execute(args, ctx) {
         const payload: StructuredDataPayload = {
           ownerId: String(args.resourceId),
-          namespace: "autoaeo",
+          namespace: "pigeon",
           key: String(args.key),
           json: args.json,
         };

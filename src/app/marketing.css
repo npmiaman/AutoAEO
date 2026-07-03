@@ -1,31 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 5%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 5%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 5%;
-    --primary: 0 0% 5%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 5%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 42%;
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 5%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 0 0% 5%;
-    --radius: 0.75rem;
-  }
-}
-
-:root {
+/* Scoped to .landing so these custom props can't clobber the app's shadcn
+   tokens (e.g. --muted) on the dashboard / auth pages. */
+.landing {
   --bg: #ffffff;
   --ink: #0d0d0d;
   --muted: #6b6b6b;
@@ -40,15 +15,18 @@
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
-* { box-sizing: border-box; }
+.landing, .landing * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
-body {
+.landing {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
 }
-a { color: inherit; text-decoration: none; }
+/* :where() keeps specificity at 0 so it never overrides .btn-primary / .nav-cta
+   text colours (which is what caused black-on-black buttons). */
+.landing :where(a) { color: inherit; text-decoration: none; }
 
 /* Landing-only scale — 5% px tweaks are imperceptible; this makes the bump visible */
 main.landing {

@@ -23,9 +23,9 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Stores</h1>
+          <h1 className="font-heading text-3xl tracking-tight">Stores</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Connect a Shopify store to start running AEO playbooks against it.
+            Connect a Shopify store to start running Pigeon against it.
           </p>
         </div>
         <Link href="/connect">
