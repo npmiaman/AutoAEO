@@ -1,0 +1,106 @@
+import "server-only";
+import { generateText } from "./llm";
+import type { SearchOutcome } from "./ranking";
+
+// ─────────────────────────────────────────────────────────────────────
+// Diagnosis — the intelligence step. Given the searches we DID rank on and
+// the ones we DIDN'T, an LLM decodes what makes the difference: what our SEO
+// and GEO (generative engine optimization) do well on the winners, what's
+// missing on the losers, and concrete moves — both to WIN the searches we're
+// absent from and to STRENGTHEN the ones we already own.
+//
+// The output feeds the autonomous loop as candidate actions (each with the
+// example searches it should move the needle on, so we can re-measure them).
+// ─────────────────────────────────────────────────────────────────────
+
+export interface Recommendation {
+  kind: "win_missing" | "strengthen_existing";
+  action: string; // what to change, concretely (a GEO/SEO move)
+  rationale: string; // why this should move the needle
+  exampleQueries: string[]; // searches this targets, for re-measurement
+}
+
+export interface Diagnosis {
+  rankedOn: string[]; // searches we appear on
+  missingOn: string[]; // searches we don't
+  whatWorks: string[]; // patterns behind the wins
+  whatsMissing: string[]; // SEO/GEO gaps behind the losses
+  recommendations: Recommendation[];
+}
+
+export async function diagnose(args: {
+  brandName: string;
+  domain: string;
+  business: string;
+  outcomes: SearchOutcome[];
+}): Promise<Diagnosis> {
+  const scored = args.outcomes.filter((o) => !o.error);
+  const rankedOn = scored.filter((o) => o.appeared).map((o) => o.query);
+  const missingOn = scored.filter((o) => !o.appeared).map((o) => o.query);
+
+  // Build compact context: for winners, who we beat/sat with; for losers, who won.
+  const winnerLines = scored
+    .filter((o) => o.appeared)
+    .map(
+      (o) =>
+        `- "${o.query}"  (our rank: ${o.position ?? "cited"}; alongside: ${o.rankedEntities
+          .slice(0, 5)
+          .join(", ")})`,
+    )
+    .join("\n");
+  const loserLines = scored
+    .filter((o) => !o.appeared)
+    .map(
+      (o) =>
+        `- "${o.query}"  (winners: ${o.rankedEntities.slice(0, 5).join(", ") || "n/a"})`,
+    )
+    .join("\n");
+
+  const prompt = `You are a GEO/SEO strategist. A business is tested against ${scored.length} realistic AI-assistant searches. It appears in ${rankedOn.length} and is absent from ${missingOn.length}.
+
+BUSINESS: "${args.brandName}" (${args.domain}) — ${args.business}
+
+SEARCHES WE ALREADY RANK ON:
+${winnerLines || "(none)"}
+
+SEARCHES WE ARE ABSENT FROM (and who wins them):
+${loserLines || "(none)"}
+
+Decode the difference. Be concrete and specific to this business — not generic advice.
+
+Return ONLY JSON, no prose:
+{
+  "whatWorks": ["why we rank on the winners — content, structure, entities, or authority patterns"],
+  "whatsMissing": ["what our SEO/GEO lacks that keeps us out of the losers"],
+  "recommendations": [
+    {"kind":"win_missing","action":"<specific GEO/SEO change>","rationale":"<why it moves the needle>","exampleQueries":["<2-4 of the absent searches this targets>"]},
+    {"kind":"strengthen_existing","action":"...","rationale":"...","exampleQueries":["..."]}
+  ]
+}`;
+
+  try {
+    const raw = await generateText(prompt, { temperature: 0.3 });
+    const jsonText = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
+    const parsed = JSON.parse(jsonText) as Partial<Diagnosis>;
+    return {
+      rankedOn,
+      missingOn,
+      whatWorks: parsed.whatWorks ?? [],
+      whatsMissing: parsed.whatsMissing ?? [],
+      recommendations: (parsed.recommendations ?? []).map((r) => ({
+        kind: r.kind === "strengthen_existing" ? "strengthen_existing" : "win_missing",
+        action: r.action ?? "",
+        rationale: r.rationale ?? "",
+        exampleQueries: (r.exampleQueries ?? []).slice(0, 6),
+      })),
+    };
+  } catch {
+    return {
+      rankedOn,
+      missingOn,
+      whatWorks: [],
+      whatsMissing: [],
+      recommendations: [],
+    };
+  }
+}

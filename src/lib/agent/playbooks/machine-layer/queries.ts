@@ -21,7 +21,6 @@ export interface ProductSummary {
   priceRangeTo: string | null;
   currencyCode: string | null;
   featuredImage: string | null;
-  onlineStoreUrl: string | null;
 }
 
 export interface CollectionSummary {
@@ -30,7 +29,6 @@ export interface CollectionSummary {
   title: string;
   description: string;
   productsCount: number | null;
-  onlineStoreUrl: string | null;
 }
 
 export interface PageSummary {
@@ -38,7 +36,6 @@ export interface PageSummary {
   handle: string;
   title: string;
   bodySummary: string;
-  onlineStoreUrl: string | null;
 }
 
 export interface ArticleSummary {
@@ -103,7 +100,6 @@ export async function fetchProducts(
           tags: string[];
           status: string;
           totalInventory: number | null;
-          onlineStoreUrl: string | null;
           featuredImage: { url: string } | null;
           priceRangeV2: {
             minVariantPrice: { amount: string; currencyCode: string };
@@ -127,7 +123,6 @@ export async function fetchProducts(
               tags
               status
               totalInventory
-              onlineStoreUrl
               featuredImage { url }
               priceRangeV2 {
                 minVariantPrice { amount currencyCode }
@@ -155,7 +150,6 @@ export async function fetchProducts(
     priceRangeTo: n.priceRangeV2.maxVariantPrice.amount ?? null,
     currencyCode: n.priceRangeV2.minVariantPrice.currencyCode ?? null,
     featuredImage: n.featuredImage?.url ?? null,
-    onlineStoreUrl: n.onlineStoreUrl,
   }));
 }
 
@@ -173,7 +167,6 @@ export async function fetchCollections(
           handle: string;
           title: string;
           description: string;
-          onlineStoreUrl: string | null;
           productsCount: { count: number } | null;
         };
       }>;
@@ -188,7 +181,6 @@ export async function fetchCollections(
               handle
               title
               description
-              onlineStoreUrl
               productsCount { count }
             }
           }
@@ -204,7 +196,6 @@ export async function fetchCollections(
     title: n.title,
     description: n.description ?? "",
     productsCount: n.productsCount?.count ?? null,
-    onlineStoreUrl: n.onlineStoreUrl,
   }));
 }
 
@@ -235,7 +226,6 @@ export async function fetchPages(
     handle: p.handle,
     title: p.title,
     bodySummary: p.body_summary ?? "",
-    onlineStoreUrl: null,
   }));
 }
 

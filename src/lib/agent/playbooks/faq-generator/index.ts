@@ -273,7 +273,6 @@ async function fetchAllPagesWithBodyAndFaqMetafield(
     bodySummary: stripHtml(e.node.body).slice(0, 280),
     bodyHtml: e.node.body,
     existingFaqMetafield: e.node.metafield?.value ?? null,
-    onlineStoreUrl: null,
   }));
 }
 

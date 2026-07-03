@@ -107,6 +107,108 @@ export const agentRun = sqliteTable("agent_run", {
   completedAt: integer("completedAt", { mode: "timestamp" }),
 });
 
+// ─────────────────────────────────────────────────────────────
+// AutoAEO v2 — platform-agnostic sites + autonomous loop + memory
+//
+// `shop` above stays the Shopify-specific record (OAuth token, domain).
+// `site` generalizes it: one row per optimizable site regardless of
+// platform (shopify | generic-crawl | sdk-embedded). A Shopify `site`
+// points back at its `shop` via shopId; generic/sdk sites have none.
+// ─────────────────────────────────────────────────────────────
+
+export const site = sqliteTable("site", {
+  id: text("id").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  platform: text("platform").notNull(), // 'shopify' | 'generic' | 'sdk'
+  name: text("name").notNull(),
+  url: text("url").notNull(), // public storefront / site root
+  primaryDomain: text("primaryDomain").notNull(),
+  // For platform === 'shopify': the backing shop row (token, theme access).
+  shopId: text("shopId").references(() => shop.id, { onDelete: "cascade" }),
+  // For platform === 'sdk'/'generic': API key the SDK/CLI authenticates with.
+  apiKey: text("apiKey").unique(),
+  // Autonomy + loop configuration. See site/config.ts for the shape.
+  //   { autonomy: 'full'|'safe'|'manual', autoRollback: bool,
+  //     minImprovement: number, cadenceMinutes: number, paused: bool }
+  configJson: text("configJson"),
+  createdAt: integer("createdAt", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  lastLoopAt: integer("lastLoopAt", { mode: "timestamp" }),
+});
+
+// A standing optimization objective for a site. The loop turns goals into
+// experiments and measures progress against them.
+export const goal = sqliteTable("goal", {
+  id: text("id").primaryKey(),
+  siteId: text("siteId")
+    .notNull()
+    .references(() => site.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), // 'aeo' | 'seo'
+  description: text("description").notNull(), // human statement of the goal
+  // AEO: buyer questions we want the site cited for.
+  targetQueriesJson: text("targetQueriesJson"), // string[]
+  // SEO: keywords/topics we want to rank/appear for.
+  targetKeywordsJson: text("targetKeywordsJson"), // string[]
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("createdAt", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+// One attempt by the autonomous loop: a hypothesis, the change it made, the
+// before/after scores, and the verdict. This is the agent's episodic memory —
+// consulted before every action so it never repeats a dead end.
+export const experiment = sqliteTable("experiment", {
+  id: text("id").primaryKey(),
+  siteId: text("siteId")
+    .notNull()
+    .references(() => site.id, { onDelete: "cascade" }),
+  goalId: text("goalId").references(() => goal.id, { onDelete: "set null" }),
+  playbook: text("playbook").notNull(), // which action was taken
+  hypothesis: text("hypothesis").notNull(), // why we expected this to help
+  // Stable fingerprint of (playbook + target + change intent) for exact-match
+  // dedup: "have we literally tried this before?".
+  fingerprint: text("fingerprint").notNull(),
+  status: text("status").notNull(), // 'proposed'|'applied'|'measuring'|'kept'|'reverted'|'failed'
+  changeJson: text("changeJson"), // the Artifact(s) applied
+  snapshotJson: text("snapshotJson"), // before-state for rollback
+  // No scoring. We compare which searches we appear on before vs after.
+  baselineAppeared: integer("baselineAppeared"), // # of searches we ranked on before
+  resultAppeared: integer("resultAppeared"), // # of searches we ranked on after
+  gainedJson: text("gainedJson"), // searches we newly appear on (the win)
+  lostJson: text("lostJson"), // searches we dropped off (the regression, if any)
+  verdict: text("verdict"), // 'improved'|'no_change'|'regressed'
+  notes: text("notes"), // free-form learning to carry forward
+  createdAt: integer("createdAt", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  completedAt: integer("completedAt", { mode: "timestamp" }),
+});
+
+// A point-in-time measurement of a site's performance on some signal.
+// Baseline (experimentId null) or the post-change reading for an experiment.
+export const measurement = sqliteTable("measurement", {
+  id: text("id").primaryKey(),
+  siteId: text("siteId")
+    .notNull()
+    .references(() => site.id, { onDelete: "cascade" }),
+  experimentId: text("experimentId").references(() => experiment.id, {
+    onDelete: "cascade",
+  }),
+  goalId: text("goalId").references(() => goal.id, { onDelete: "set null" }),
+  signal: text("signal").notNull(), // 'synthetic_ai' (extensible: 'gsc'|'lighthouse')
+  // Factual counts, not a score: on how many of the searches did we appear.
+  appeared: integer("appeared").notNull(),
+  total: integer("total").notNull(),
+  detailJson: text("detailJson"), // full outcomes (who ranks where) + LLM diagnosis
+  createdAt: integer("createdAt", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
 // A single proposed change inside an agent run. User reviews/approves these.
 export const changeProposal = sqliteTable("change_proposal", {
   id: text("id").primaryKey(),

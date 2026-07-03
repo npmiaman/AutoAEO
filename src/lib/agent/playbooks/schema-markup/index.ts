@@ -295,7 +295,6 @@ async function fetchEnrichableResources(client: ShopifyClient): Promise<{
             handle: string;
             title: string;
             description: string;
-            onlineStoreUrl: string | null;
             metafield: { value: string } | null;
           };
         }>;
@@ -306,7 +305,7 @@ async function fetchEnrichableResources(client: ShopifyClient): Promise<{
           products(first: $first, query: "status:active", sortKey: UPDATED_AT, reverse: true) {
             edges {
               node {
-                id handle title description onlineStoreUrl
+                id handle title description
                 metafield(namespace: "autoaeo", key: "schema_extra") { value }
               }
             }
