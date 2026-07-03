@@ -41,19 +41,19 @@ export default function SignUpPage() {
         href="/"
         className="inline-flex items-center gap-3 self-start hover:opacity-80"
       >
-        <PixelPigeon size={44} />
-        <span className="text-xl font-semibold tracking-tight">
+        <PixelPigeon size={32} />
+        <span className="text-lg font-semibold tracking-tight">
           <span className="text-muted-foreground">[</span>P
           <span className="text-muted-foreground">]</span>igeon
         </span>
       </Link>
 
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center pb-16">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center pb-16">
+        <h1 className="text-3xl font-bold tracking-tight">
           Create an account
         </h1>
 
-        <form onSubmit={onSubmit} className="mt-9 space-y-3.5">
+        <form onSubmit={onSubmit} className="mt-8 space-y-3">
           <div>
             <Label htmlFor="name" className="sr-only">
               Name
@@ -64,7 +64,7 @@ export default function SignUpPage() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="h-13 rounded-2xl border-transparent bg-muted/60 px-4 text-base shadow-none placeholder:text-muted-foreground/70 focus-visible:bg-background"
+              className="h-11 rounded-xl border-transparent bg-muted/60 px-4 text-sm shadow-none placeholder:text-muted-foreground/70 focus-visible:bg-background"
             />
           </div>
           <div>
@@ -79,7 +79,7 @@ export default function SignUpPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-13 rounded-2xl border-transparent bg-muted/60 px-4 text-base shadow-none placeholder:text-muted-foreground/70 focus-visible:bg-background"
+              className="h-11 rounded-xl border-transparent bg-muted/60 px-4 text-sm shadow-none placeholder:text-muted-foreground/70 focus-visible:bg-background"
             />
           </div>
           <div>
@@ -95,7 +95,7 @@ export default function SignUpPage() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-13 rounded-2xl border-transparent bg-muted/60 px-4 text-base shadow-none placeholder:text-muted-foreground/70 focus-visible:bg-background"
+              className="h-11 rounded-xl border-transparent bg-muted/60 px-4 text-sm shadow-none placeholder:text-muted-foreground/70 focus-visible:bg-background"
             />
           </div>
 
@@ -113,7 +113,7 @@ export default function SignUpPage() {
 
           <Button
             type="submit"
-            className="h-13 w-full rounded-full text-base font-semibold"
+            className="h-11 w-full rounded-full text-sm font-semibold"
             disabled={loading}
           >
             {loading ? "Creating account…" : "Sign up"}
