@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { shop as shopTable, site as siteTable } from "@/lib/db/schema";
 import { createShopifyClient } from "@/lib/shopify/client";
 import { ShopifyAdapter } from "@/lib/agent/site/shopify-adapter";
+import { GenericSiteAdapter } from "@/lib/agent/site/generic-adapter";
 import type { SiteAdapter } from "@/lib/agent/site/adapter";
 import { parseSiteConfig, type SiteConfig } from "@/lib/agent/site/config";
 
@@ -66,6 +67,13 @@ async function buildAdapter(s: typeof siteTable.$inferSelect): Promise<SiteAdapt
       }),
     );
   }
-  // generic + sdk adapters arrive in Phase 5.
-  throw new Error(`No adapter yet for platform: ${s.platform}`);
+  if (s.platform === "generic" || s.platform === "sdk") {
+    return new GenericSiteAdapter({
+      siteId: s.id,
+      name: s.name,
+      url: s.url,
+      primaryDomain: s.primaryDomain,
+    });
+  }
+  throw new Error(`No adapter for platform: ${s.platform}`);
 }

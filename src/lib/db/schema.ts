@@ -139,6 +139,27 @@ export const site = sqliteTable("site", {
   lastLoopAt: integer("lastLoopAt", { mode: "timestamp" }),
 });
 
+// Artifacts the agent produced for a non-Shopify (generic/sdk) site. Since we
+// can't write to a site we don't own, changes are stored here and served to the
+// @autoaeo/sdk or CLI, which injects them at runtime / build time. One active
+// row per (site, kind, target); snapshot/revert toggle `active` + prior payload.
+export const siteArtifact = sqliteTable("site_artifact", {
+  id: text("id").primaryKey(),
+  siteId: text("siteId")
+    .notNull()
+    .references(() => site.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), // ArtifactKind
+  target: text("target").notNull(), // path / route / resource id
+  payloadJson: text("payloadJson").notNull(),
+  active: integer("active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("createdAt", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
 // A standing optimization objective for a site. The loop turns goals into
 // experiments and measures progress against them.
 export const goal = sqliteTable("goal", {
