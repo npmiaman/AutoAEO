@@ -57,6 +57,32 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+function QuickWinList({
+  queries,
+  c,
+}: {
+  queries: string[];
+  c: CompetitiveMap;
+}) {
+  return (
+    <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+      {queries.map((q) => (
+        <div
+          key={q}
+          className="flex items-center justify-between gap-3 text-[13px]"
+        >
+          <span className="truncate">{q}</span>
+          {demandTag(c, q) && (
+            <Badge variant="secondary" className="shrink-0 text-[10px]">
+              {demandTag(c, q)}
+            </Badge>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ScanReport({
   detail,
   appeared,
@@ -77,10 +103,6 @@ export function ScanReport({
   const pct = total ? Math.round((appeared / total) * 100) : 0;
   const gaps = c.focus.ourGaps;
   const quickWins = c.focus.quickWins;
-  const maxQuickDemand = Math.max(
-    0,
-    ...quickWins.slice(0, 6).map((q) => c.demand?.[q]?.monthlyVolume ?? 0),
-  );
 
   // Chart data: top competitors + your own bar, ordered by presence count.
   const bars: ChartBar[] = [
@@ -140,7 +162,7 @@ export function ScanReport({
         </CardContent>
       </Card>
 
-      {/* ── Quick wins ──────────────────────────────────────────── */}
+      {/* ── Quick wins (compact, see-all) ───────────────────────── */}
       <Card>
         <CardContent className="space-y-3 py-5">
           <SectionTitle>Quick wins to grab first</SectionTitle>
@@ -150,37 +172,20 @@ export function ScanReport({
               everywhere. See &ldquo;What to fix&rdquo; below.
             </p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {quickWins.slice(0, 8).map((q) => {
-                const vol = c.demand?.[q]?.monthlyVolume ?? 0;
-                const w = maxQuickDemand
-                  ? Math.sqrt(vol) / Math.sqrt(maxQuickDemand)
-                  : 0;
-                return (
-                  <div key={q} className="space-y-1">
-                    <div className="flex items-center justify-between gap-3 text-sm">
-                      <span className="truncate">{q}</span>
-                      {demandTag(c, q) && (
-                        <Badge
-                          variant="secondary"
-                          className="shrink-0 text-[10px]"
-                        >
-                          {demandTag(c, q)}
-                        </Badge>
-                      )}
-                    </div>
-                    {vol > 0 && (
-                      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-foreground/50"
-                          style={{ width: `${Math.max(5, Math.round(w * 100))}%` }}
-                        />
-                      </div>
-                    )}
+            <>
+              <QuickWinList queries={quickWins.slice(0, 6)} c={c} />
+              {quickWins.length > 6 && (
+                <details className="group">
+                  <summary className="cursor-pointer list-none pt-1 text-xs font-medium text-muted-foreground hover:text-foreground">
+                    See all {quickWins.length} quick wins
+                    <span className="group-open:hidden"> →</span>
+                  </summary>
+                  <div className="pt-3">
+                    <QuickWinList queries={quickWins.slice(6)} c={c} />
                   </div>
-                );
-              })}
-            </div>
+                </details>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
