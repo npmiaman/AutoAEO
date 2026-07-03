@@ -7,13 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import PixelPigeon from "@/components/PixelPigeon";
 import { authClient } from "@/lib/auth-client";
 
@@ -43,24 +37,31 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center px-6 py-16">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm font-medium text-foreground hover:opacity-80"
-          >
-            <PixelPigeon size={22} /> Pigeon
-          </Link>
+    <main className="flex flex-1 flex-col px-6 py-8">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-3 self-start hover:opacity-80"
+      >
+        <PixelPigeon size={44} />
+        <span className="text-xl font-semibold tracking-tight">
+          <span className="text-muted-foreground">[</span>P
+          <span className="text-muted-foreground">]</span>igeon
+        </span>
+      </Link>
+
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center pb-16">
+        <div className="mb-8 text-center">
+          <h1 className="font-heading text-4xl tracking-tight">
+            Create your account
+          </h1>
+          <p className="mt-2 text-muted-foreground">
+            Run your first free scan in minutes.
+          </p>
         </div>
 
         <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="font-heading text-2xl">Create your account</CardTitle>
-            <CardDescription>Run your first free scan in minutes.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={onSubmit} className="space-y-4">
+          <CardContent className="pt-6">
+            <form onSubmit={onSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input
@@ -68,6 +69,7 @@ export default function SignUpPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  className="h-11 rounded-xl"
                 />
               </div>
               <div className="space-y-2">
@@ -79,6 +81,7 @@ export default function SignUpPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="h-11 rounded-xl"
                 />
               </div>
               <div className="space-y-2">
@@ -91,19 +94,24 @@ export default function SignUpPage() {
                   minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="h-11 rounded-xl"
                 />
                 <p className="text-xs text-muted-foreground">
                   At least 8 characters.
                 </p>
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button
+                type="submit"
+                className="h-11 w-full rounded-xl"
+                disabled={loading}
+              >
                 {loading ? "Creating account…" : "Create account"}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account?{" "}
           <Link href="/signin" className="font-medium text-foreground hover:underline">
             Sign in
