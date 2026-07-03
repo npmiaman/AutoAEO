@@ -10,7 +10,8 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "scan": "node --conditions=react-server --env-file=.env.local --import tsx scripts/scan.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

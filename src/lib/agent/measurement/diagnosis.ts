@@ -1,5 +1,6 @@
 import "server-only";
 import { generateText } from "./llm";
+import { STRATEGY_BRIEF } from "@/lib/agent/strategy";
 import type { SearchOutcome } from "./ranking";
 
 // ─────────────────────────────────────────────────────────────────────
@@ -56,7 +57,13 @@ export async function diagnose(args: {
     )
     .join("\n");
 
-  const prompt = `You are a GEO/SEO strategist. A business is tested against ${scored.length} realistic AI-assistant searches. It appears in ${rankedOn.length} and is absent from ${missingOn.length}.
+  const prompt = `You are a GEO/SEO strategist. Base every recommendation on the playbook below — recommend what actually moves AI citations, not generic advice. Prefer high-impact layers (entity/trust, answer-first content, FAQPage schema, off-site authority, crawler access) and explicitly de-prioritize low-impact ones (llms.txt, "AI-specific" schema).
+
+${STRATEGY_BRIEF}
+
+────────────────────────────────────────
+
+A business is tested against ${scored.length} realistic AI-assistant searches. It appears in ${rankedOn.length} and is absent from ${missingOn.length}.
 
 BUSINESS: "${args.brandName}" (${args.domain}) — ${args.business}
 
