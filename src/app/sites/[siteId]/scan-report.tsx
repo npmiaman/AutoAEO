@@ -65,7 +65,7 @@ function QuickWinList({
   c: CompetitiveMap;
 }) {
   return (
-    <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+    <div className="space-y-2">
       {queries.map((q) => (
         <div
           key={q}
@@ -106,7 +106,7 @@ export function ScanReport({
 
   // Chart data: top competitors + your own bar, ordered by presence count.
   const bars: ChartBar[] = [
-    ...c.competitors.slice(0, 7).map((comp) => ({
+    ...c.competitors.slice(0, 6).map((comp) => ({
       name: comp.name,
       count: comp.ranksOn.length,
       logoUrl: comp.logoUrl,
@@ -148,47 +148,48 @@ export function ScanReport({
         />
       </div>
 
-      {/* ── Who's winning — vertical bar chart with logos (incl. you) ─ */}
-      <Card>
-        <CardContent className="space-y-5 py-5">
-          <SectionTitle>Who&rsquo;s winning your searches</SectionTitle>
-          {c.competitors.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No recurring competitors surfaced.
-            </p>
-          ) : (
-            <CompetitorChart bars={bars} maxCount={maxCompCount} />
-          )}
-        </CardContent>
-      </Card>
+      {/* ── Who's winning + Quick wins — side by side in one row ──── */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardContent className="space-y-5 py-5">
+            <SectionTitle>Who&rsquo;s winning your searches</SectionTitle>
+            {c.competitors.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No recurring competitors surfaced.
+              </p>
+            ) : (
+              <CompetitorChart bars={bars} maxCount={maxCompCount} />
+            )}
+          </CardContent>
+        </Card>
 
-      {/* ── Quick wins (compact, see-all) ───────────────────────── */}
-      <Card>
-        <CardContent className="space-y-3 py-5">
-          <SectionTitle>Quick wins to grab first</SectionTitle>
-          {quickWins.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No open searches — you&rsquo;re up against established competitors
-              everywhere. See &ldquo;What to fix&rdquo; below.
-            </p>
-          ) : (
-            <>
-              <QuickWinList queries={quickWins.slice(0, 6)} c={c} />
-              {quickWins.length > 6 && (
-                <details className="group">
-                  <summary className="cursor-pointer list-none pt-1 text-xs font-medium text-muted-foreground hover:text-foreground">
-                    See all {quickWins.length} quick wins
-                    <span className="group-open:hidden"> →</span>
-                  </summary>
-                  <div className="pt-3">
-                    <QuickWinList queries={quickWins.slice(6)} c={c} />
-                  </div>
-                </details>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+        <Card>
+          <CardContent className="space-y-3 py-5">
+            <SectionTitle>Quick wins to grab first</SectionTitle>
+            {quickWins.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No open searches — you&rsquo;re up against established
+                competitors everywhere. See &ldquo;What to fix&rdquo; below.
+              </p>
+            ) : (
+              <>
+                <QuickWinList queries={quickWins.slice(0, 6)} c={c} />
+                {quickWins.length > 6 && (
+                  <details className="group">
+                    <summary className="cursor-pointer list-none pt-1 text-xs font-medium text-muted-foreground hover:text-foreground">
+                      See all {quickWins.length} quick wins
+                      <span className="group-open:hidden"> →</span>
+                    </summary>
+                    <div className="pt-3">
+                      <QuickWinList queries={quickWins.slice(6)} c={c} />
+                    </div>
+                  </details>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* ── What to fix ─────────────────────────────────────────── */}
       {dx.recommendations.length > 0 && (
