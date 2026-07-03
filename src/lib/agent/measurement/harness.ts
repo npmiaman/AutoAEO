@@ -42,6 +42,47 @@ async function mapLimit<T, R>(
   return out;
 }
 
+// ─── Targeted re-measure (for the loop's keep/rollback decision) ─────
+//
+// Cheaper than a full scan: run a specific set of searches, return only which
+// ones we appear on. No diagnosis, no persistence. The loop calls this before
+// and after a change on exactly the searches the change targeted.
+export interface QuickMeasureResult {
+  appearedQueries: string[]; // searches we ranked on
+  total: number; // searches actually scored (excludes engine errors)
+  outcomes: SearchOutcome[];
+}
+
+export async function quickMeasure(args: {
+  brandName: string;
+  primaryDomain: string;
+  searches: string[];
+  engines?: AiEngine[];
+}): Promise<QuickMeasureResult> {
+  const engines = (args.engines ?? availableEngines()).filter((e) =>
+    e.available(),
+  );
+  if (engines.length === 0) throw new Error("No AI engines configured.");
+  if (args.searches.length === 0)
+    return { appearedQueries: [], total: 0, outcomes: [] };
+
+  const jobs = engines.flatMap((engine) =>
+    args.searches.map((query) => ({ engine, query })),
+  );
+  const raw = await mapLimit(jobs, CONCURRENCY, ({ engine, query }) =>
+    engine.query(query),
+  );
+  const outcomes = await mapLimit(raw, CONCURRENCY, (r) =>
+    extractSearchOutcome(r, args.brandName, args.primaryDomain),
+  );
+  const scored = outcomes.filter((o) => !o.error);
+  return {
+    appearedQueries: scored.filter((o) => o.appeared).map((o) => o.query),
+    total: scored.length,
+    outcomes,
+  };
+}
+
 export interface ScanInput {
   siteId: string;
   brandName: string;
