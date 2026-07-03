@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import PixelPigeon from "@/components/PixelPigeon";
 import { authClient } from "@/lib/auth-client";
 
@@ -49,55 +48,55 @@ export function SignInForm() {
       </Link>
 
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center pb-16">
-        <div className="mb-8 text-center">
-          <h1 className="font-heading text-4xl tracking-tight">Welcome back</h1>
-          <p className="mt-2 text-muted-foreground">
-            Sign in to your Pigeon account.
-          </p>
-        </div>
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+          Log in
+        </h1>
 
-        <Card>
-          <CardContent className="pt-6">
-            <form onSubmit={onSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-11 rounded-xl"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  minLength={8}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 rounded-xl"
-                />
-              </div>
-              <Button
-                type="submit"
-                className="h-11 w-full rounded-xl"
-                disabled={loading}
-              >
-                {loading ? "Signing in…" : "Sign in"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        <form onSubmit={onSubmit} className="mt-9 space-y-3.5">
+          <div>
+            <Label htmlFor="email" className="sr-only">
+              Email
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="Email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-13 rounded-2xl border-transparent bg-muted/60 px-4 text-base shadow-none placeholder:text-muted-foreground/70 focus-visible:bg-background"
+            />
+          </div>
+          <div>
+            <Label htmlFor="password" className="sr-only">
+              Password
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Password"
+              required
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-13 rounded-2xl border-transparent bg-muted/60 px-4 text-base shadow-none placeholder:text-muted-foreground/70 focus-visible:bg-background"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            className="mt-2 h-13 w-full rounded-full text-base font-semibold"
+            disabled={loading}
+          >
+            {loading ? "Logging in…" : "Log in"}
+          </Button>
+        </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           New here?{" "}
-          <Link href="/signup" className="font-medium text-foreground hover:underline">
+          <Link href="/signup" className="font-semibold text-foreground hover:underline">
             Create an account
           </Link>
         </p>
