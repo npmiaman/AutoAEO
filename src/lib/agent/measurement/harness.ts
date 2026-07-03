@@ -10,6 +10,8 @@ import { diagnose, type Diagnosis } from "./diagnosis";
 import {
   buildCompetitiveMap,
   applyDemand,
+  classifyStrongCompetitors,
+  applyStrength,
   analyzeCompetitorsBasis,
   resolveCompetitorLogos,
   type CompetitiveMap,
@@ -191,6 +193,15 @@ export async function finalizeScan(args: {
     input.brandName,
     input.primaryDomain,
   );
+
+  // "Strong" competitors judged by authority (LLM), not by appearance count —
+  // this drives quick-win vs entrenched classification.
+  const strong = await classifyStrongCompetitors(
+    competitors.competitors,
+    input.business,
+  );
+  applyStrength(competitors, strong);
+
   if (input.withVolume !== false) {
     const demand = await fetchQueryVolumes(
       competitors.rankings.map((r) => r.query),

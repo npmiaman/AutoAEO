@@ -86,12 +86,21 @@ function isSelf(name: string, ourName: string, ourDomain: string): boolean {
   );
 }
 
-// Resolve a competitor's domain (for logo display). If the name itself is a
-// domain, use it; otherwise match it against the cited source hosts on the
-// searches it ranked for.
-function resolveDomain(name: string, outcomes: SearchOutcome[]): string | undefined {
-  const asDomain = name.trim().toLowerCase().match(/([a-z0-9-]+\.)+[a-z]{2,}/);
-  if (asDomain) return asDomain[0];
+// Canonical key that merges the same brand written different ways
+// ("Upwork" and "upwork.com" → "upwork").
+export function canonKey(name: string): { key: string; isDomain: boolean } {
+  const low = name.trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0].split("?")[0];
+  const dm = low.match(/^([a-z0-9-]+)\.[a-z0-9.-]*[a-z]{2,}$/);
+  if (dm) return { key: dm[1], isDomain: true };
+  return { key: low.replace(/[^a-z0-9]/g, ""), isDomain: false };
+}
+
+function toDomain(name: string): string {
+  return name.trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0].split("?")[0].replace(/^www\./, "");
+}
+
+// Best-effort domain from cited sources, for logos.
+function domainFromCitations(name: string, outcomes: SearchOutcome[]): string | undefined {
   const token = normalizeName(name);
   if (!token) return undefined;
   for (const o of outcomes) {
@@ -99,11 +108,7 @@ function resolveDomain(name: string, outcomes: SearchOutcome[]): string | undefi
     for (const url of o.citations) {
       const host = hostOf(url);
       const hn = normalizeName(host);
-      if (
-        host &&
-        (hn.includes(token) ||
-          token.includes(hn.replace(/(com|io|co|net|org)$/, "")))
-      )
+      if (host && (hn.includes(token) || token.includes(hn.replace(/(com|io|co|net|org)$/, ""))))
         return host;
     }
   }
@@ -118,68 +123,130 @@ export function buildCompetitiveMap(
   const scored = outcomes.filter((o) => !o.error);
   const total = scored.length;
 
-  // Per-query ranking map (us + competitors, in order).
-  const rankings: QueryRanking[] = scored.map((o) => ({
-    query: o.query,
-    ourPosition: o.position,
-    ranked: o.rankedEntities.map((name, idx) => ({
-      name,
-      position: idx + 1,
-      isUs: isSelf(name, ourName, ourDomain),
-    })),
-  }));
-
-  // Which queries each competitor ranks on (factual sets, no scores).
-  const compQueries = new Map<string, Set<string>>();
+  // Aggregate competitors by canonical key — merges "Upwork" + "upwork.com".
+  type Agg = { key: string; display: string; brand?: string; domainCand?: string; queries: Set<string> };
+  const agg = new Map<string, Agg>();
   for (const o of scored) {
     for (const name of o.rankedEntities) {
       if (isSelf(name, ourName, ourDomain)) continue;
-      const key = name.trim();
+      const { key, isDomain } = canonKey(name);
       if (!key) continue;
-      (compQueries.get(key) ?? compQueries.set(key, new Set()).get(key)!).add(
-        o.query,
-      );
+      let a = agg.get(key);
+      if (!a) {
+        a = { key, display: name, queries: new Set() };
+        agg.set(key, a);
+      }
+      a.queries.add(o.query);
+      if (isDomain) {
+        a.domainCand ??= toDomain(name);
+        if (!a.brand) a.display = name;
+      } else {
+        a.brand = name;
+        a.display = name; // prefer a clean brand name for display
+      }
     }
   }
-  const competitors = [...compQueries.entries()]
-    .map(([name, qs]) => ({
-      name,
-      ranksOn: [...qs],
-      domain: resolveDomain(name, scored),
+
+  const competitors = [...agg.values()]
+    .map((a) => ({
+      name: a.display,
+      ranksOn: [...a.queries],
+      domain:
+        a.domainCand ??
+        domainFromCitations(a.brand ?? a.display, scored) ??
+        `${a.key}.com`, // fallback so a logo always resolves
     }))
-    .sort((a, b) => b.ranksOn.length - a.ranksOn.length);
+    .sort((x, y) => y.ranksOn.length - x.ranksOn.length);
 
-  // "Strong" = recurring winners; used only to classify search difficulty.
-  const strongThreshold = Math.max(2, Math.ceil(total * 0.15));
-  const strongSet = new Set(
-    competitors.filter((c) => c.ranksOn.length >= strongThreshold).map((c) => c.name),
-  );
+  const displayByKey = new Map([...agg.values()].map((a) => [a.key, a.display]));
 
-  const ourWins: string[] = [];
-  const ourGaps: string[] = [];
-  const quickWins: string[] = [];
-  const entrenched: string[] = [];
-  for (const o of scored) {
-    if (o.appeared) {
-      ourWins.push(o.query);
-      continue;
-    }
-    ourGaps.push(o.query);
-    const strongPresent = o.rankedEntities.filter((e) => strongSet.has(e));
-    if (strongPresent.length === 0) quickWins.push(o.query);
-    else if (strongPresent.length >= 3) entrenched.push(o.query);
-  }
+  // Per-query ranking map, deduped by canonical key.
+  const rankings: QueryRanking[] = scored.map((o) => {
+    const seen = new Set<string>();
+    const ranked: { name: string; position: number; isUs: boolean }[] = [];
+    o.rankedEntities.forEach((name, idx) => {
+      const self = isSelf(name, ourName, ourDomain);
+      const key = self ? "__self__" : canonKey(name).key;
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      ranked.push({
+        name: self ? name : displayByKey.get(key) ?? name,
+        position: idx + 1,
+        isUs: self,
+      });
+    });
+    return { query: o.query, ourPosition: o.position, ranked };
+  });
+
+  const ourWins = scored.filter((o) => o.appeared).map((o) => o.query);
+  const ourGaps = scored.filter((o) => !o.appeared).map((o) => o.query);
 
   return {
     totalSearches: total,
     ourAppearances: ourWins.length,
     rankings,
     competitors,
-    strongCompetitors: [...strongSet],
-    focus: { quickWins, ourWins, entrenched, ourGaps },
+    strongCompetitors: [], // filled by applyStrength (LLM-judged authority)
+    focus: { quickWins: [], ourWins, entrenched: [], ourGaps },
     demand: {},
     basis: [],
   };
+}
+
+// ─── "Strong" = established/authoritative brand, judged by an LLM ─────
+//
+// NOT frequency. Upwork is a strong competitor whether it appeared once or 40
+// times; a one-off obscure site is weak regardless. The LLM classifies each
+// surfaced brand by real-world recognizability/authority.
+
+export async function classifyStrongCompetitors(
+  competitors: Array<{ name: string }>,
+  business?: string,
+): Promise<string[]> {
+  if (competitors.length === 0) return [];
+  const list = competitors
+    .slice(0, 40)
+    .map((c, i) => `${i + 1}. ${c.name}`)
+    .join("\n");
+
+  const prompt = `Below are brands/sites that AI assistants surface for ${business ?? "this market"}. Classify each as ESTABLISHED — a well-known, authoritative brand or major platform that would be hard to displace — or MINOR (obscure, thin, low-authority, or a one-off). Judge by real-world recognizability and authority, NOT by how often it appears.
+
+${list}
+
+Return ONLY a JSON array of the EXACT names you judge ESTABLISHED:
+["Name A","Name B"]`;
+
+  try {
+    const raw = await generateText(prompt, { temperature: 0 });
+    const names = JSON.parse(
+      raw.slice(raw.indexOf("["), raw.lastIndexOf("]") + 1),
+    ) as string[];
+    return names.map((n) => canonKey(String(n)).key).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/** Recompute focus signals (quick-wins vs entrenched) from the LLM strong set. */
+export function applyStrength(map: CompetitiveMap, strongKeys: string[]): void {
+  const strong = new Set(strongKeys);
+  map.strongCompetitors = map.competitors
+    .filter((c) => strong.has(canonKey(c.name).key))
+    .map((c) => c.name);
+
+  const quickWins: string[] = [];
+  const entrenched: string[] = [];
+  for (const r of map.rankings) {
+    if (r.ourPosition) continue; // we appear here — not a gap
+    const strongPresent = r.ranked
+      .filter((p) => !p.isUs)
+      .map((p) => canonKey(p.name).key)
+      .filter((k) => strong.has(k));
+    if (strongPresent.length === 0) quickWins.push(r.query);
+    else if (strongPresent.length >= 2) entrenched.push(r.query);
+  }
+  map.focus.quickWins = quickWins;
+  map.focus.entrenched = entrenched;
 }
 
 /** Attach search demand and re-sort focus lists by volume (highest first). */
@@ -345,35 +412,79 @@ function absolutize(href: string, base: string): string {
   }
 }
 
-async function resolveLogo(domain: string): Promise<string> {
+// Verify a URL actually returns a real image (not a 404 page, HTML error, or a
+// 1x1 tracking pixel). This is the "check if the logo was retrieved correctly".
+async function isValidImage(url: string): Promise<boolean> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 6000);
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Pigeon-Bot/1.0 (+https://pigeon.com/bot)" },
+      redirect: "follow",
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) return false;
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.toLowerCase().startsWith("image")) return false;
+    const buf = await res.arrayBuffer();
+    return buf.byteLength > 100; // reject empty / 1x1 placeholders
+  } catch {
+    return false;
+  }
+}
+
+// Ordered candidate sources for a domain's logo.
+async function logoCandidates(domain: string): Promise<string[]> {
   const base = `https://${domain}/`;
+  const out: string[] = [];
   const html = await fetchHtml(base);
   if (html) {
     const links = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]);
     const hrefOf = (tag: string) => tag.match(/href=["']([^"']+)["']/i)?.[1];
-    // Prefer apple-touch-icon (a square brand logo), then any rel="icon".
-    const apple = links.find(
-      (t) => /rel=["'][^"']*apple-touch-icon/i.test(t) && hrefOf(t),
-    );
-    if (apple) return absolutize(hrefOf(apple)!, base);
-    const icon = links.find(
-      (t) => /rel=["'][^"']*\bicon\b/i.test(t) && hrefOf(t),
-    );
-    if (icon) return absolutize(hrefOf(icon)!, base);
+    const apple = links.find((t) => /rel=["'][^"']*apple-touch-icon/i.test(t) && hrefOf(t));
+    if (apple) out.push(absolutize(hrefOf(apple)!, base));
+    for (const t of links.filter((t) => /rel=["'][^"']*\bicon\b/i.test(t) && hrefOf(t))) {
+      out.push(absolutize(hrefOf(t)!, base));
+    }
+    const og = html.match(/<meta[^>]+property=["']og:image["'][^>]*>/i)?.[0];
+    const ogHref = og?.match(/content=["']([^"']+)["']/i)?.[1];
+    if (ogHref) out.push(absolutize(ogHref, base));
   }
-  // Reliable fallback — always returns an image.
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+  out.push(`https://${domain}/apple-touch-icon.png`);
+  out.push(`https://${domain}/favicon.ico`);
+  out.push(`https://logo.clearbit.com/${domain}`);
+  out.push(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
+  return [...new Set(out)];
 }
 
-/** Extract logos for the top `count` competitors (mutates the map in place). */
+/**
+ * Resolve a verified logo: try each candidate source and KEEP GOING until one
+ * actually returns a valid image. Returns null only if every source failed.
+ */
+async function resolveLogo(domain: string): Promise<string | null> {
+  for (const url of await logoCandidates(domain)) {
+    if (await isValidImage(url)) return url;
+  }
+  return null;
+}
+
+/**
+ * Extract + verify logos for the top `count` competitors. Retries the whole
+ * candidate chain per competitor (up to `attempts` passes) until each gets a
+ * verified logo, so transient fetch failures don't leave a competitor blank.
+ */
 export async function resolveCompetitorLogos(
   map: CompetitiveMap,
   count = 8,
+  attempts = 2,
 ): Promise<void> {
   const targets = map.competitors.slice(0, count).filter((c) => c.domain);
   await Promise.all(
     targets.map(async (c) => {
-      c.logoUrl = await resolveLogo(c.domain!);
+      for (let pass = 0; pass < attempts && !c.logoUrl; pass++) {
+        c.logoUrl = (await resolveLogo(c.domain!)) ?? undefined;
+      }
     }),
   );
 }
