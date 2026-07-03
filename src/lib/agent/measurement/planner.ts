@@ -70,8 +70,16 @@ BUSINESS: "${args.brandName}" (${args.domain}) — ${args.business}
 
 WHERE WE STAND: appear on ${c.ourAppearances}/${c.totalSearches} searches.
 
-QUICK-WIN WHITESPACE (absent, NO strong competitor — attack first):
-${c.focus.quickWins.map((q) => `- ${q}`).join("\n") || "- (none)"}
+QUICK-WIN WHITESPACE (absent, NO strong competitor — attack first; monthly search demand shown, prioritize HIGH demand):
+${
+  c.focus.quickWins
+    .map((q) => {
+      const d = c.demand[q];
+      const vol = d?.monthlyVolume;
+      return `- ${q}  [${vol != null ? `~${vol}/mo demand${d.source === "llm-estimate" ? " est." : ""}` : "demand unknown"}]`;
+    })
+    .join("\n") || "- (none)"
+}
 
 SEARCHES WE WIN (defend/strengthen):
 ${c.focus.ourWins.map((q) => `- ${q}`).join("\n") || "- (none)"}

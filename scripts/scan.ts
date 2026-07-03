@@ -83,9 +83,13 @@ async function main() {
   }
 
   console.log(
-    `\nQUICK-WIN WHITESPACE — ${c.focus.quickWins.length} search(es), no strong rival (win first):`,
+    `\nQUICK-WIN WHITESPACE — ${c.focus.quickWins.length} search(es), no strong rival (by search demand):`,
   );
-  for (const q of c.focus.quickWins) console.log(`  ○ ${q}`);
+  for (const q of c.focus.quickWins) {
+    const d = c.demand[q];
+    const tag = d?.monthlyVolume != null ? `  [~${d.monthlyVolume}/mo${d.source === "llm-estimate" ? " est" : ""}]` : "";
+    console.log(`  ○ ${q}${tag}`);
+  }
 
   if (c.basis.length) {
     console.log("\nWHY THE LEADERS RANK (and how to beat them):");

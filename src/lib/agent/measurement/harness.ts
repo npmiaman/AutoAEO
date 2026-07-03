@@ -9,9 +9,11 @@ import { extractSearchOutcome, type SearchOutcome } from "./ranking";
 import { diagnose, type Diagnosis } from "./diagnosis";
 import {
   buildCompetitiveMap,
+  applyDemand,
   analyzeCompetitorBasis,
   type CompetitiveMap,
 } from "./competitors";
+import { fetchQueryVolumes } from "@/lib/agent/volume";
 
 // ─────────────────────────────────────────────────────────────────────
 // Visibility scan ("autoresearch"). Once per day per site, batched:
@@ -102,6 +104,8 @@ export interface ScanInput {
   // Deep-analyze the top N competitors' ranking basis (fetch a cited page +
   // LLM). 0 disables. Bounded because each costs a fetch + LLM call.
   analyzeCompetitors?: number;
+  // Look up search demand (keyword volume) per query. Default true.
+  withVolume?: boolean;
 }
 
 export interface ScanResult {
@@ -158,6 +162,16 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
     input.brandName,
     input.primaryDomain,
   );
+
+  // Attach search demand (keyword volume) and re-sort focus by it, so
+  // high-demand gaps rank above long-tail nobody searches.
+  if (input.withVolume !== false) {
+    const demand = await fetchQueryVolumes(
+      competitors.rankings.map((r) => r.query),
+    );
+    applyDemand(competitors, Object.fromEntries(demand));
+  }
+
   const topN = input.analyzeCompetitors ?? 0;
   if (topN > 0 && competitors.competitors.length) {
     competitors.basis = await mapLimit(

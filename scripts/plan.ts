@@ -38,6 +38,11 @@ async function main() {
   console.log("═".repeat(64));
   console.log(`  RANKING MAP — we appear on ${c.ourAppearances}/${c.totalSearches} searches`);
   console.log("═".repeat(64));
+  const demandTag = (q: string) => {
+    const d = c.demand[q];
+    if (!d || d.monthlyVolume == null) return "";
+    return `  [~${d.monthlyVolume}/mo${d.source === "llm-estimate" ? " est" : ""}]`;
+  };
   for (const q of c.rankings) {
     const us = q.ourPosition ? `WE #${q.ourPosition}` : "WE —";
     const others = q.ranked
@@ -45,13 +50,13 @@ async function main() {
       .slice(0, 5)
       .map((p) => `${p.position}.${p.name}`)
       .join("  ");
-    console.log(`  ${us.padEnd(7)} | ${q.query}`);
+    console.log(`  ${us.padEnd(7)} | ${q.query}${demandTag(q.query)}`);
     if (others) console.log(`          └ ${others}`);
   }
 
-  console.log("\nFOCUS SIGNALS:");
+  console.log("\nFOCUS SIGNALS (quick wins sorted by search demand):");
   console.log(`  quick wins (absent, no strong rival): ${c.focus.quickWins.length}`);
-  c.focus.quickWins.forEach((q) => console.log(`     ○ ${q}`));
+  c.focus.quickWins.forEach((q) => console.log(`     ○ ${q}${demandTag(q)}`));
   console.log(`  we already win: ${c.focus.ourWins.length}  ·  entrenched (hard): ${c.focus.entrenched.length}`);
 
   const plan = await buildImprovementPlan({

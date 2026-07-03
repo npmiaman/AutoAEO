@@ -41,6 +41,13 @@ export interface CompetitorBasis {
   howToBeat: string[]; // concrete moves to out-rank them
 }
 
+// Monthly search demand behind a query's head keyword (see agent/volume).
+export interface QueryDemand {
+  keyword: string;
+  monthlyVolume: number | null;
+  source: string;
+}
+
 export interface CompetitiveMap {
   totalSearches: number;
   ourAppearances: number;
@@ -49,6 +56,9 @@ export interface CompetitiveMap {
   competitors: Array<{ name: string; ranksOn: string[] }>;
   strongCompetitors: string[]; // recurring winners (context for focus signals)
   focus: FocusSignals;
+  // Search demand keyed by query — attached after the map is built. Focus
+  // lists are re-sorted by volume so high-demand gaps come first.
+  demand: Record<string, QueryDemand>;
   basis: CompetitorBasis[]; // per-leader ranking-factor analysis (optional)
 }
 
@@ -132,8 +142,22 @@ export function buildCompetitiveMap(
     competitors,
     strongCompetitors: [...strongSet],
     focus: { quickWins, ourWins, entrenched, ourGaps },
+    demand: {},
     basis: [],
   };
+}
+
+/** Attach search demand and re-sort focus lists by volume (highest first). */
+export function applyDemand(
+  map: CompetitiveMap,
+  demand: Record<string, QueryDemand>,
+): void {
+  map.demand = demand;
+  const vol = (q: string) => demand[q]?.monthlyVolume ?? -1;
+  const byVol = (a: string, b: string) => vol(b) - vol(a);
+  map.focus.quickWins.sort(byVol);
+  map.focus.ourGaps.sort(byVol);
+  map.focus.ourWins.sort(byVol);
 }
 
 // ─── "Why do they rank?" — fetch a cited page and decode it ───────────
