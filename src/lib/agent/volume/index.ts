@@ -33,7 +33,15 @@ export async function fetchQueryVolumes(
 
   const keywordByQuery = await extractKeywords(queries);
   const keywords = [...new Set([...keywordByQuery.values()])];
-  const volumes = await provider.volumes(keywords);
+  let volumes = await provider.volumes(keywords);
+
+  // If the preferred provider returned nothing usable (e.g. DataForSEO account
+  // not yet verified, or an outage), fall back to the labeled estimate so
+  // demand ranking still works instead of showing "no data".
+  const gotData = [...volumes.values()].some((v) => v.monthlyVolume != null);
+  if (!gotData && provider !== estimateProvider && estimateProvider.available()) {
+    volumes = await estimateProvider.volumes(keywords);
+  }
 
   for (const q of queries) {
     const keyword = keywordByQuery.get(q) ?? q;
