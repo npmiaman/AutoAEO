@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import PixelPigeon from "@/components/PixelPigeon";
 import { authClient } from "@/lib/auth-client";
 
 export default function SignUpPage() {
@@ -47,9 +48,9 @@ export default function SignUpPage() {
         <div className="text-center">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:opacity-80"
+            className="inline-flex items-center gap-2 text-sm font-medium text-foreground hover:opacity-80"
           >
-            <span aria-hidden>🐦</span> Pigeon
+            <PixelPigeon size={22} /> Pigeon
           </Link>
         </div>
 

@@ -8,7 +8,7 @@ import GetStartedCard from "./GetStartedCard";
 import Faqs from "./Faqs";
 import ProblemScroll from "./ProblemScroll";
 import ContactPopup from "./ContactPopup";
-import PixelPigeon from "./PixelPigeon";
+import PixelPigeon from "@/components/PixelPigeon";
 
 const CONTACT_EMAIL = "hello@pigeon.dev";
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import PixelPigeon from "@/components/PixelPigeon";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -47,7 +48,7 @@ export function DashboardShell({
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
           <div className="flex items-center gap-6">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <span className="text-base" aria-hidden>🐦</span>
+              <PixelPigeon size={22} />
               <span className="text-sm font-semibold tracking-tight">
                 Pigeon
               </span>
