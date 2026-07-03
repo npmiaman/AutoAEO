@@ -24,7 +24,7 @@ async function main() {
   console.log(`\nLoop iterations:`);
   if (r.iterations.length === 0) console.log("  (autonomy is manual — no actions taken)");
   for (const it of r.iterations) {
-    console.log(`  • [${it.status}] ${it.actionId ?? "-"} — ${it.summary}`);
+    console.log(`  • [${it.status}] (${it.changes ?? 0} change/s) — ${it.summary}`);
     if (it.gained?.length) console.log(`      gained: ${it.gained.join(", ")}`);
     if (it.lost?.length) console.log(`      lost:   ${it.lost.join(", ")}`);
   }

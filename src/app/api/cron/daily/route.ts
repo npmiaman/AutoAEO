@@ -28,7 +28,7 @@ export async function GET(req: Request) {
       results.push({
         site: site.name,
         appeared: `${r.scan.appeared}/${r.scan.total}`,
-        actions: r.iterations.map((i) => `${i.actionId ?? "-"}:${i.status}`),
+        actions: r.iterations.map((i) => `${i.status}(${i.changes ?? 0})`),
       });
     } catch (err) {
       results.push({

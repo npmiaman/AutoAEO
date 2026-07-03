@@ -5,7 +5,8 @@ import { and, desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/lib/db";
 import { experiment } from "@/lib/db/schema";
-import { buildEmbeddings, EMBEDDING_DIMENSIONS } from "@/lib/agent/embeddings";
+import { EMBEDDING_DIMENSIONS } from "@/lib/agent/embeddings";
+import { embedTexts } from "@/lib/agent/embed";
 
 // ─────────────────────────────────────────────────────────────────────
 // Experiment memory — the agent's episodic learning store.
@@ -186,9 +187,13 @@ export async function completeExperiment(
     .filter(Boolean)
     .join(" ");
 
+  // Semantic index is best-effort: if no embedding provider is configured,
+  // the SQL experiment row above is still the source of truth (recentLearnings
+  // reads it); only cross-attempt semantic recall is unavailable.
+  const vecs = await embedTexts([text]);
+  if (!vecs?.[0]) return;
   await ensureMemoryTable();
   const c = client();
-  const [vec] = await buildEmbeddings().embedDocuments([text]);
   await c.execute({
     sql: `
       INSERT INTO experiment_memory
@@ -205,7 +210,7 @@ export async function completeExperiment(
       row.playbook,
       outcome.verdict ?? null,
       text,
-      JSON.stringify(vec),
+      JSON.stringify(vecs[0]),
     ],
   });
 }
@@ -230,9 +235,11 @@ export async function findSimilarAttempts(
   proposalText: string,
   k = 5,
 ): Promise<PriorAttempt[]> {
+  const vecs = await embedTexts([proposalText]);
+  if (!vecs?.[0]) return []; // no embedding provider — semantic recall disabled
   await ensureMemoryTable();
   const c = client();
-  const [queryVec] = await buildEmbeddings().embedDocuments([proposalText]);
+  const queryVec = vecs[0];
   const result = await c.execute({
     sql: `
       SELECT experiment_id, playbook, verdict, text,
