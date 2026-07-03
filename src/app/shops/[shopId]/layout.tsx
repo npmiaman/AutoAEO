@@ -25,14 +25,5 @@ export default async function ShopLayout({
     .limit(1);
   if (!owned[0]) notFound();
 
-  const shops = await db
-    .select({ id: shopTable.id, shopDomain: shopTable.shopDomain })
-    .from(shopTable)
-    .where(eq(shopTable.userId, session.user.id));
-
-  return (
-    <DashboardShell user={session.user} shops={shops}>
-      {children}
-    </DashboardShell>
-  );
+  return <DashboardShell user={session.user}>{children}</DashboardShell>;
 }

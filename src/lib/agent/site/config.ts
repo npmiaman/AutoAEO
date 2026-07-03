@@ -13,6 +13,9 @@ export type Autonomy =
   | "manual"; // propose only; require human approval (legacy behavior)
 
 export interface SiteConfig {
+  // Free-text description of what the site/business does — drives buyer-search
+  // generation. Set when the user adds their website.
+  business?: string;
   autonomy: Autonomy;
   // Revert a change automatically when its measured score doesn't clear
   // baseline + minImprovement.

@@ -43,9 +43,10 @@ export async function resolveSite(siteId: string): Promise<ResolvedSite> {
     name: s.name,
     url: s.url,
     primaryDomain: s.primaryDomain,
-    // A short natural-language description drives search generation. We reuse
-    // the site name + domain; the loop can enrich this from goals.
-    business: `${s.name} (${s.primaryDomain})`,
+    // The user-provided description of what the site does drives search
+    // generation; fall back to name + domain if none was given.
+    business:
+      parseSiteConfig(s.configJson).business ?? `${s.name} (${s.primaryDomain})`,
     config: parseSiteConfig(s.configJson),
     adapter,
   };

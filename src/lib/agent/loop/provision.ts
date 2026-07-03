@@ -62,6 +62,7 @@ export async function ensureSiteForShop(shopId: string): Promise<string> {
 export async function provisionGenericSite(args: {
   userId: string;
   url: string;
+  description?: string; // what the site/business does — drives search generation
 }): Promise<{ siteId: string; apiKey: string }> {
   const profile = await fetchSiteProfile(args.url);
 
@@ -81,6 +82,10 @@ export async function provisionGenericSite(args: {
 
   const id = nanoid();
   const apiKey = `aeo_${nanoid(32)}`;
+  const config = {
+    ...DEFAULT_SITE_CONFIG,
+    ...(args.description?.trim() ? { business: args.description.trim() } : {}),
+  };
   await db.insert(siteTable).values({
     id,
     userId: args.userId,
@@ -89,7 +94,7 @@ export async function provisionGenericSite(args: {
     url: profile.url,
     primaryDomain: profile.primaryDomain,
     apiKey,
-    configJson: JSON.stringify(DEFAULT_SITE_CONFIG),
+    configJson: JSON.stringify(config),
   });
   return { siteId: id, apiKey };
 }
