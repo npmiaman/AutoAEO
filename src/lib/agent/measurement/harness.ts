@@ -5,7 +5,7 @@ import { measurement } from "@/lib/db/schema";
 import { availableEngines, type AiEngine } from "./engines";
 import type { EngineQueryResult } from "./engines/types";
 import { generateSearchIdeas } from "./searches";
-import { extractSearchOutcome, type SearchOutcome } from "./ranking";
+import { extractSearchOutcomes, type SearchOutcome } from "./ranking";
 import { diagnose, type Diagnosis } from "./diagnosis";
 import {
   buildCompetitiveMap,
@@ -79,8 +79,10 @@ export async function quickMeasure(args: {
   const raw = await mapLimit(jobs, CONCURRENCY, ({ engine, query }) =>
     engine.query(query),
   );
-  const outcomes = await mapLimit(raw, CONCURRENCY, (r) =>
-    extractSearchOutcome(r, args.brandName, args.primaryDomain),
+  const outcomes = await extractSearchOutcomes(
+    raw,
+    args.brandName,
+    args.primaryDomain,
   );
   const scored = outcomes.filter((o) => !o.error);
   return {
@@ -147,9 +149,11 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
     engine.query(query),
   );
 
-  // 2. Extract who ranks + our position on each.
-  const outcomes: SearchOutcome[] = await mapLimit(raw, CONCURRENCY, (r) =>
-    extractSearchOutcome(r, input.brandName, input.primaryDomain),
+  // 2. Extract who ranks + our position on each — one batched LLM call.
+  const outcomes: SearchOutcome[] = await extractSearchOutcomes(
+    raw,
+    input.brandName,
+    input.primaryDomain,
   );
 
   const scored = outcomes.filter((o) => !o.error);

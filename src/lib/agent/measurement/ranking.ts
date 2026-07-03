@@ -90,11 +90,11 @@ Return ONLY JSON, no prose:
   }
 }
 
-export async function extractSearchOutcome(
+function outcomeFrom(
   result: EngineQueryResult,
-  brandName: string,
   domain: string,
-): Promise<SearchOutcome> {
+  extracted: Extracted,
+): SearchOutcome {
   const base = { engine: result.engine, query: result.query };
   if (result.error) {
     return {
@@ -108,19 +108,95 @@ export async function extractSearchOutcome(
     };
   }
   const cited = citedInSources(result.citations, domain);
-  const { entities, ourPosition } = await extractRanking(
-    result.answerText,
-    brandName,
-    domain,
-  );
-  const appeared = cited || ourPosition !== null;
   return {
     ...base,
-    appeared,
+    appeared: cited || extracted.ourPosition !== null,
     cited,
-    position: ourPosition,
-    rankedEntities: entities,
-    // Keep only http(s) source URLs (the engine also returns title strings).
+    position: extracted.ourPosition,
+    rankedEntities: extracted.entities,
     citations: result.citations.filter((c) => /^https?:\/\//i.test(c)),
   };
+}
+
+export async function extractSearchOutcome(
+  result: EngineQueryResult,
+  brandName: string,
+  domain: string,
+): Promise<SearchOutcome> {
+  if (result.error) return outcomeFrom(result, domain, { entities: [], ourPosition: null });
+  const extracted = await extractRanking(result.answerText, brandName, domain);
+  return outcomeFrom(result, domain, extracted);
+}
+
+/**
+ * Batched extraction — one LLM call analyzes ALL answers at once instead of one
+ * call per answer. Answers are truncated and indexed; the model returns a JSON
+ * array keyed by index. Falls back to per-answer extraction if the batch parse
+ * fails, so results are never lost.
+ */
+export async function extractSearchOutcomes(
+  results: EngineQueryResult[],
+  brandName: string,
+  domain: string,
+): Promise<SearchOutcome[]> {
+  const answered = results
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => !r.error && r.answerText.trim());
+
+  const byIndex = new Map<number, Extracted>();
+
+  // Chunk so each call stays well within context (one call per ~25 answers,
+  // instead of one per answer). Chunks run concurrently.
+  const CHUNK = 25;
+  const chunks: Array<Array<{ r: EngineQueryResult; i: number }>> = [];
+  for (let k = 0; k < answered.length; k += CHUNK) {
+    chunks.push(answered.slice(k, k + CHUNK));
+  }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const blocks = chunk
+        .map(({ r, i }) => `[${i}] Query: ${r.query}\n"""\n${r.answerText.slice(0, 2500)}\n"""`)
+        .join("\n\n");
+
+      const prompt = `You analyze AI assistant answers to shopper/consumer searches. For EACH answer below, list the businesses/brands/stores it names IN ORDER, and where the business under test ranks.
+
+BUSINESS UNDER TEST: "${brandName}" (website ${domain})
+
+ANSWERS:
+${blocks}
+
+Return ONLY a JSON array — one object per answer, keyed by its [index]:
+[{"i": <index>, "entities": ["First named","Second named"], "ourPosition": <1-based index of the business under test in entities, or null if absent>}]`;
+
+      try {
+        const rawText = await generateText(prompt, { temperature: 0 });
+        const jsonText = rawText.slice(rawText.indexOf("["), rawText.lastIndexOf("]") + 1);
+        const parsed = JSON.parse(jsonText) as Array<{
+          i?: number;
+          entities?: unknown[];
+          ourPosition?: number | null;
+        }>;
+        for (const p of parsed) {
+          if (typeof p.i !== "number") continue;
+          byIndex.set(p.i, {
+            entities: (p.entities ?? []).map((e) => String(e).trim()).filter(Boolean).slice(0, 20),
+            ourPosition:
+              typeof p.ourPosition === "number" && p.ourPosition > 0 ? p.ourPosition : null,
+          });
+        }
+      } catch {
+        // Chunk parse failed — fall back to per-answer extraction for it only.
+        await Promise.all(
+          chunk.map(async ({ r, i }) => {
+            byIndex.set(i, await extractRanking(r.answerText, brandName, domain));
+          }),
+        );
+      }
+    }),
+  );
+
+  return results.map((r, i) =>
+    outcomeFrom(r, domain, byIndex.get(i) ?? { entities: [], ourPosition: null }),
+  );
 }
