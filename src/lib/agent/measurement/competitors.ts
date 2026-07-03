@@ -230,53 +230,87 @@ function citationForCompetitor(
   return null;
 }
 
-export async function analyzeCompetitorBasis(args: {
-  name: string;
-  ranksOn: string[];
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Batched "why they rank" — fetches each top competitor's cited page (concurrent
+ * HTTP), then decodes ALL of them in a single LLM call returning a JSON array.
+ * Was one LLM call per competitor.
+ */
+export async function analyzeCompetitorsBasis(args: {
+  competitors: Array<{ name: string; ranksOn: string[] }>;
   outcomes: SearchOutcome[];
-}): Promise<CompetitorBasis> {
-  const url = citationForCompetitor(args.name, args.outcomes);
-  const html = url ? await fetchPageText(url) : null;
-  const pageText = html
-    ? html
-        .replace(/<script[\s\S]*?<\/script>/gi, " ")
-        .replace(/<style[\s\S]*?<\/style>/gi, " ")
-        .replace(/<[^>]+>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim()
-        .slice(0, 5000)
-    : "";
-  const hasSchema = html ? /application\/ld\+json/i.test(html) : false;
-  const hasFaqSchema = html ? /"FAQPage"|"@type"\s*:\s*"Question"/i.test(html) : false;
+}): Promise<CompetitorBasis[]> {
+  if (args.competitors.length === 0) return [];
 
-  const prompt = `A competitor "${args.name}" gets cited by AI assistants for: ${args.ranksOn
-    .slice(0, 4)
-    .join("; ")}.
+  // 1. Gather page context per competitor (HTTP fetches — concurrent).
+  const ctx = await Promise.all(
+    args.competitors.map(async (c) => {
+      const url = citationForCompetitor(c.name, args.outcomes);
+      const html = url ? await fetchPageText(url) : null;
+      return {
+        name: c.name,
+        ranksOn: c.ranksOn.slice(0, 4),
+        url,
+        pageText: html ? stripHtml(html).slice(0, 2500) : "",
+        hasSchema: html ? /application\/ld\+json/i.test(html) : false,
+        hasFaqSchema: html ? /"FAQPage"|"@type"\s*:\s*"Question"/i.test(html) : false,
+      };
+    }),
+  );
 
-${url ? `Their cited page: ${url}` : "No cited page URL was resolvable."}
-Detected on page: JSON-LD schema=${hasSchema}, FAQ schema=${hasFaqSchema}.
-${pageText ? `Page content (excerpt):\n"""${pageText}"""` : "(page content unavailable)"}
+  const empty = (): CompetitorBasis[] =>
+    ctx.map((c) => ({
+      name: c.name,
+      url: c.url,
+      ranksOn: c.ranksOn,
+      factors: [],
+      howToBeat: [],
+    }));
 
-Explain, evidence-based (not generic):
-1. WHY this page/brand gets cited — ranking factors actually present.
-2. HOW to out-rank them — concrete moves.
+  // 2. One LLM call for all competitors.
+  const blocks = ctx
+    .map(
+      (c, i) => `[${i}] Competitor "${c.name}" — cited for: ${c.ranksOn.join("; ")}
+${c.url ? `Cited page: ${c.url}` : "No cited page resolvable."}
+Detected: JSON-LD=${c.hasSchema}, FAQ schema=${c.hasFaqSchema}.
+${c.pageText ? `Excerpt: """${c.pageText}"""` : "(no page content)"}`,
+    )
+    .join("\n\n");
 
-Return ONLY JSON: {"factors": ["..."], "howToBeat": ["..."]}`;
+  const prompt = `You are a GEO/SEO strategist. For EACH competitor below, explain — evidence-based, not generic — WHY it gets cited by AI assistants (ranking factors actually present) and HOW to out-rank it (concrete moves).
+
+${blocks}
+
+Return ONLY a JSON array, one object per competitor keyed by its [index]:
+[{"i": <index>, "factors": ["..."], "howToBeat": ["..."]}]`;
 
   try {
     const raw = await generateText(prompt, { temperature: 0.3 });
     const parsed = JSON.parse(
-      raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1),
-    ) as { factors?: string[]; howToBeat?: string[] };
-    return {
-      name: args.name,
-      url,
-      ranksOn: args.ranksOn.slice(0, 4),
-      factors: parsed.factors ?? [],
-      howToBeat: parsed.howToBeat ?? [],
-    };
+      raw.slice(raw.indexOf("["), raw.lastIndexOf("]") + 1),
+    ) as Array<{ i?: number; factors?: string[]; howToBeat?: string[] }>;
+    const byIndex = new Map<number, { factors: string[]; howToBeat: string[] }>();
+    for (const p of parsed) {
+      if (typeof p.i !== "number") continue;
+      byIndex.set(p.i, { factors: p.factors ?? [], howToBeat: p.howToBeat ?? [] });
+    }
+    return ctx.map((c, i) => ({
+      name: c.name,
+      url: c.url,
+      ranksOn: c.ranksOn,
+      factors: byIndex.get(i)?.factors ?? [],
+      howToBeat: byIndex.get(i)?.howToBeat ?? [],
+    }));
   } catch {
-    return { name: args.name, url, ranksOn: args.ranksOn.slice(0, 4), factors: [], howToBeat: [] };
+    return empty();
   }
 }
 

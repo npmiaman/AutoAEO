@@ -17,7 +17,7 @@ export {
 } from "./diagnosis";
 export {
   buildCompetitiveMap,
-  analyzeCompetitorBasis,
+  analyzeCompetitorsBasis,
   type CompetitiveMap,
   type QueryRanking,
   type RankedPlayer,

@@ -29,7 +29,7 @@ Include:
 Rules:
 - Write like a real person searches — natural, varied length, casual.
 - Do NOT name any specific business or brand.
-- Be thorough: cover the many distinct ways buyers phrase these needs. Generate as many genuinely different, useful searches as apply — up to ${max}. Don't pad with near-duplicates.
+- Generate ${max} distinct searches — thorough coverage of the different ways buyers phrase these needs, no near-duplicates.
 
 Return ONLY a JSON array of strings, no prose, no code fences:
 ["...","...","..."]`;

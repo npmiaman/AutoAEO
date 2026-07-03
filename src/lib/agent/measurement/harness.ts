@@ -10,7 +10,7 @@ import { diagnose, type Diagnosis } from "./diagnosis";
 import {
   buildCompetitiveMap,
   applyDemand,
-  analyzeCompetitorBasis,
+  analyzeCompetitorsBasis,
   resolveCompetitorLogos,
   type CompetitiveMap,
 } from "./competitors";
@@ -183,11 +183,11 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
 
   const topN = input.analyzeCompetitors ?? 0;
   if (topN > 0 && competitors.competitors.length) {
-    competitors.basis = await mapLimit(
-      competitors.competitors.slice(0, topN),
-      2,
-      (c) => analyzeCompetitorBasis({ name: c.name, ranksOn: c.ranksOn, outcomes }),
-    );
+    // Batched: all top competitors analyzed in one LLM call.
+    competitors.basis = await analyzeCompetitorsBasis({
+      competitors: competitors.competitors.slice(0, topN),
+      outcomes,
+    });
   }
 
   // Extract the top competitors' logos (fetch their site → real brand logo).
