@@ -18,6 +18,7 @@ export interface SearchOutcome {
   cited: boolean;
   position: number | null; // rank among named businesses; null if absent
   rankedEntities: string[]; // businesses named, in order
+  citations: string[]; // source URLs the engine grounded on (for competitor tracing)
   error?: string;
 }
 
@@ -102,6 +103,7 @@ export async function extractSearchOutcome(
       cited: false,
       position: null,
       rankedEntities: [],
+      citations: [],
       error: result.error,
     };
   }
@@ -118,5 +120,7 @@ export async function extractSearchOutcome(
     cited,
     position: ourPosition,
     rankedEntities: entities,
+    // Keep only http(s) source URLs (the engine also returns title strings).
+    citations: result.citations.filter((c) => /^https?:\/\//i.test(c)),
   };
 }

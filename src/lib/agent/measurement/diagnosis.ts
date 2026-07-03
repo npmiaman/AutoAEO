@@ -34,6 +34,8 @@ export async function diagnose(args: {
   domain: string;
   business: string;
   outcomes: SearchOutcome[];
+  // Searches where NO strong competitor appears — the easiest to win.
+  whitespace?: string[];
 }): Promise<Diagnosis> {
   const scored = args.outcomes.filter((o) => !o.error);
   const rankedOn = scored.filter((o) => o.appeared).map((o) => o.query);
@@ -72,8 +74,15 @@ ${winnerLines || "(none)"}
 
 SEARCHES WE ARE ABSENT FROM (and who wins them):
 ${loserLines || "(none)"}
+${
+  args.whitespace?.length
+    ? `\nWHITESPACE — absent searches where NO strong competitor appears (only weak/thin players). These are the EASIEST to win; prioritize win_missing recommendations that target them:\n${args.whitespace
+        .map((q) => `- ${q}`)
+        .join("\n")}`
+    : ""
+}
 
-Decode the difference. Be concrete and specific to this business — not generic advice.
+Decode the difference. Be concrete and specific to this business — not generic advice. When you recommend win_missing actions, prefer targeting the whitespace searches first.
 
 Return ONLY JSON, no prose:
 {

@@ -16,6 +16,14 @@ export {
   type Recommendation,
 } from "./diagnosis";
 export {
+  buildCompetitiveReport,
+  analyzeCompetitorBasis,
+  type CompetitiveReport,
+  type CompetitorStanding,
+  type WhitespaceSearch,
+  type CompetitorBasis,
+} from "./competitors";
+export {
   availableEngines,
   ALL_ENGINES,
   type AiEngine,

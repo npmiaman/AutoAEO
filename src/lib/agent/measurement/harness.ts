@@ -7,6 +7,11 @@ import type { EngineQueryResult } from "./engines/types";
 import { generateSearchIdeas } from "./searches";
 import { extractSearchOutcome, type SearchOutcome } from "./ranking";
 import { diagnose, type Diagnosis } from "./diagnosis";
+import {
+  buildCompetitiveReport,
+  analyzeCompetitorBasis,
+  type CompetitiveReport,
+} from "./competitors";
 
 // ─────────────────────────────────────────────────────────────────────
 // Visibility scan ("autoresearch"). Once per day per site, batched:
@@ -94,6 +99,9 @@ export interface ScanInput {
   goalId?: string | null;
   experimentId?: string | null;
   persist?: boolean; // default true; false for dry runs before the table exists
+  // Deep-analyze the top N competitors' ranking basis (fetch a cited page +
+  // LLM). 0 disables. Bounded because each costs a fetch + LLM call.
+  analyzeCompetitors?: number;
 }
 
 export interface ScanResult {
@@ -104,6 +112,7 @@ export interface ScanResult {
   appearedQueries: string[];
   outcomes: SearchOutcome[];
   diagnosis: Diagnosis;
+  competitors: CompetitiveReport;
   engines: string[];
   ranAt: number;
 }
@@ -142,12 +151,31 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
   const scored = outcomes.filter((o) => !o.error);
   const appearedQueries = scored.filter((o) => o.appeared).map((o) => o.query);
 
-  // 3. Diagnose the win/loss split.
+  // 3. Competitive intelligence: share of voice + whitespace (free from the
+  //    outcomes), then optional "why they rank" basis for the top competitors.
+  const competitors = buildCompetitiveReport(
+    outcomes,
+    input.brandName,
+    input.primaryDomain,
+  );
+  const topN = input.analyzeCompetitors ?? 0;
+  if (topN > 0 && competitors.leaderboard.length) {
+    competitors.basis = await mapLimit(
+      competitors.leaderboard.slice(0, topN),
+      2,
+      (c) => analyzeCompetitorBasis({ competitor: c, outcomes }),
+    );
+  }
+
+  // 4. Diagnose the win/loss split, informed by the whitespace.
   const diagnosis = await diagnose({
     brandName: input.brandName,
     domain: input.primaryDomain,
     business: input.business,
     outcomes,
+    whitespace: competitors.whitespace
+      .filter((w) => w.strength === "open")
+      .map((w) => w.query),
   });
 
   // 4. Persist a single measurement row (counts + detail, no score).
@@ -166,6 +194,7 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
         engines: engines.map((e) => e.name),
         outcomes,
         diagnosis,
+        competitors,
       }),
     });
   }
@@ -178,6 +207,7 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
     appearedQueries,
     outcomes,
     diagnosis,
+    competitors,
     engines: engines.map((e) => e.name),
     ranAt: Date.now(),
   };

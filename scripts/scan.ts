@@ -44,6 +44,7 @@ async function main() {
     business,
     searchCount: count,
     persist: false,
+    analyzeCompetitors: Number(arg("competitors", "3")),
   });
 
   console.log("═".repeat(64));
@@ -65,6 +66,34 @@ async function main() {
     console.log(`  ${o.appeared ? "✅" : "❌"}  ${tag.padEnd(9)} ${o.query}`);
     if (!o.appeared && o.rankedEntities.length)
       console.log(`             winners: ${o.rankedEntities.slice(0, 5).join(" · ")}`);
+  }
+
+  const c = r.competitors;
+  console.log("\n" + "─".repeat(64));
+  console.log("COMPETITOR SHARE OF VOICE (who wins these searches):");
+  for (const s of c.leaderboard.slice(0, 10)) {
+    console.log(
+      `  ${Math.round(s.shareOfVoice * 100)
+        .toString()
+        .padStart(3)}%  ${s.name}  (${s.appearances} search${
+        s.appearances === 1 ? "" : "es"
+      }${s.avgPosition ? `, avg #${s.avgPosition.toFixed(1)}` : ""})`,
+    );
+  }
+
+  const open = c.whitespace.filter((w) => w.strength === "open");
+  console.log(
+    `\nWHITESPACE — ${open.length} search(es) where NO strong competitor appears (win these first):`,
+  );
+  for (const w of open.slice(0, 12)) console.log(`  ○ ${w.query}`);
+
+  if (c.basis.length) {
+    console.log("\nWHY THE LEADERS RANK (and how to beat them):");
+    for (const b of c.basis) {
+      console.log(`  ▸ ${b.name}${b.url ? `  (${b.url})` : ""}`);
+      b.factors.slice(0, 3).forEach((f) => console.log(`      why: ${f}`));
+      b.howToBeat.slice(0, 2).forEach((h) => console.log(`      beat: ${h}`));
+    }
   }
 
   const dx = r.diagnosis;
