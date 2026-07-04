@@ -36,10 +36,17 @@ export async function diagnose(args: {
   outcomes: SearchOutcome[];
   // Searches where NO strong competitor appears — the easiest to win.
   whitespace?: string[];
+  // Technical AEO/GEO audit summary (crawler access, SSR, schema) — so the
+  // diagnosis can lead with real blockers before content moves.
+  audit?: string;
 }): Promise<Diagnosis> {
   const scored = args.outcomes.filter((o) => !o.error);
   const rankedOn = scored.filter((o) => o.appeared).map((o) => o.query);
   const missingOn = scored.filter((o) => !o.appeared).map((o) => o.query);
+  // Cited (linked source) vs named (mentioned in text) — Phase 4.1: track these
+  // separately; they behave differently per engine and demand different fixes.
+  const citedCount = scored.filter((o) => o.cited).length;
+  const namedCount = scored.filter((o) => o.position !== null).length;
 
   // Build compact context: for winners, who we beat/sat with; for losers, who won.
   const winnerLines = scored
@@ -65,9 +72,14 @@ ${STRATEGY_BRIEF}
 
 ────────────────────────────────────────
 
-A business is tested against ${scored.length} realistic AI-assistant searches. It appears in ${rankedOn.length} and is absent from ${missingOn.length}.
+A business is tested against ${scored.length} realistic AI-assistant searches. It appears in ${rankedOn.length} and is absent from ${missingOn.length}. Of the appearances: ${citedCount} are CITED (linked as a source) and ${namedCount} are NAMED (mentioned in the text). Treat these separately — a page that's named but never cited needs different fixes (atomic brand-named facts, entity trust) than one that's crawled but not surfaced (SSR, schema, answer placement).
 
 BUSINESS: "${args.brandName}" (${args.domain}) — ${args.business}
+${
+  args.audit
+    ? `\nTECHNICAL AEO AUDIT (fix any FAIL here FIRST — nothing downstream matters if the site can't be crawled/read):\n${args.audit}`
+    : ""
+}
 
 SEARCHES WE ALREADY RANK ON:
 ${winnerLines || "(none)"}

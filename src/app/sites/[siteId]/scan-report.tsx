@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CompetitiveMap } from "@/lib/agent/measurement/competitors";
 import type { Diagnosis } from "@/lib/agent/measurement/diagnosis";
+import type { AeoAudit, AuditStatus } from "@/lib/agent/measurement/aeo-audit";
 import { CompetitorChart, type ChartBar } from "./competitor-chart";
 import { TopOpportunities, type Opportunity } from "./top-opportunities";
 import { RefreshLogoButton } from "./refresh-logo-button";
@@ -11,6 +12,54 @@ export interface ScanDetail {
   competitors: CompetitiveMap;
   diagnosis: Diagnosis;
   engines?: string[];
+  audit?: AeoAudit;
+  signals?: { cited: number; named: number };
+}
+
+const AUDIT_DOT: Record<AuditStatus, string> = {
+  pass: "bg-emerald-500",
+  warn: "bg-amber-500",
+  fail: "bg-red-500",
+};
+
+// The technical AEO/GEO readiness checks (Phase 0–2 of the playbook), run from
+// the site itself. Fails are the things to fix before any content work.
+function AeoAuditCard({ audit }: { audit: AeoAudit }) {
+  const fails = audit.checks.filter((c) => c.status === "fail").length;
+  return (
+    <Card>
+      <CardContent className="space-y-4 py-5">
+        <div className="flex items-center justify-between gap-3">
+          <SectionTitle>AI-readiness checks</SectionTitle>
+          <Badge variant={fails ? "destructive" : "secondary"} className="text-[10px]">
+            {audit.passed}/{audit.total} passing
+          </Badge>
+        </div>
+        <div className="space-y-3">
+          {audit.checks.map((c) => (
+            <div key={c.id} className="flex items-start gap-3">
+              <span
+                className={`mt-1.5 size-2 shrink-0 rounded-full ${AUDIT_DOT[c.status]}`}
+                aria-label={c.status}
+              />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  {c.label}
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    phase {c.phase}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">{c.detail}</p>
+                {c.fix && c.status !== "pass" && (
+                  <p className="mt-0.5 text-xs text-foreground/80">→ {c.fix}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function demandTag(c: CompetitiveMap, q: string): string | null {
@@ -120,7 +169,11 @@ export function ScanReport({
         <Stat
           label="AI visibility"
           value={`${appeared}/${total}`}
-          sub={`you show up on ${pct}% of searches`}
+          sub={
+            detail.signals
+              ? `${pct}% of searches · ${detail.signals.cited} cited · ${detail.signals.named} named`
+              : `you show up on ${pct}% of searches`
+          }
           meter={total ? appeared / total : 0}
         />
         <Stat
@@ -197,6 +250,11 @@ export function ScanReport({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* ── Technical AEO/GEO readiness (playbook Phase 0–2) ─────── */}
+      {detail.audit && detail.audit.checks.length > 0 && (
+        <AeoAuditCard audit={detail.audit} />
       )}
 
       {/* ── Full breakdown — tucked away so the page isn't a wall ── */}

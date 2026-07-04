@@ -17,45 +17,49 @@ import "server-only";
 
 // Compact, high-signal version for prompt injection. Kept tight on purpose —
 // it's context for every diagnosis call, so every line must earn its tokens.
-export const STRATEGY_BRIEF = `AEO/SEO PLAYBOOK (what actually moves AI citations in 2026):
+export const STRATEGY_BRIEF = `AEO/GEO EXECUTION PLAYBOOK — 6 phases, in order (what actually moves AI citations in 2026). Recommend concrete moves mapped to these phases; fix foundations before content.
 
-FIRST PRINCIPLE: AEO sits ON TOP of SEO — most AI engines (ChatGPT, Perplexity, Gemini) retrieve from a live search index (RAG). If a page doesn't rank in classic search, it usually can't be cited. Fix SEO fundamentals first; they are the foundation, not a separate old discipline.
+FIRST PRINCIPLE: AEO sits ON TOP of SEO — ChatGPT/Perplexity/Gemini retrieve from a live index (RAG). If a page can't be crawled or doesn't rank, it can't be cited. Foundations first.
 
-1. ENTITY & TRUST FOUNDATION (do first):
-- Consistent Organization/Person identity everywhere (same name, logo, description, links across site, LinkedIn, Crunchbase, G2/Clutch, Google Business Profile).
-- One Organization schema @id referenced site-wide so the site reads as ONE entity.
-- Claim Wikidata item with sameAs links where eligible (strongest entity signal).
-- VERIFY crawlers aren't blocked: GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, ChatGPT-User, Google-Extended, CCBot in robots.txt AND any CDN/WAF (Cloudflare blocks AI bots by default for many). A single blocked crawler makes you invisible for no other reason.
+PHASE 0 — FOUNDATION AUDIT (diagnostic; nothing else works until these pass):
+- Crawler access: robots.txt AND CDN/WAF must NOT block GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, ChatGPT-User, Google-Extended, CCBot. Cloudflare blocks AI bots by default for many sites — a single block makes you invisible for no other reason.
+- Server-side rendering: AI crawlers read RAW HTML and do NOT run JavaScript. Real content (headings, copy, FAQs) must be present in view-source, not injected client-side.
+- Risk audit (Lily Ray): self-promo listicles ranking your own product #1, programmatic "[competitor]-alternatives" pages, and hidden "summarize with AI" prompt-injection buttons are HIGH spam-risk — treat as liabilities, not assets.
 
-2. ANSWER-FIRST CONTENT:
-- Lead every section with a direct, self-contained answer in the first 40–100 words, then expand. Write the opener as if it's the only thing the AI reads.
-- Question-format H2/H3 headings mirroring real prompts ("How does X work" not "X Overview").
-- Tables earn ~2.5x more AI citations than the same info as prose — use them for data.
-- Fact/statistic density every ~150–200 words; back claims with numbers, named sources, expert quotes. Unsupported opinion gets cited far less.
-- Cover query fan-out: AI splits one question into sub-queries — answer the likely sub-questions as their own sections.
-- Depth with substance: thin AI-generated summaries get filtered out; original expertise/data gets cited.
+PHASE 1 — ENTITY & IDENTITY (be one clear, corroborated entity — Barnard/Haynes):
+- Entity Home: ONE canonical URL (About/founder page) as the single source of truth for who you are, what you do, who you serve, credentials.
+- Self-corroboration loop: link from the Entity Home OUT to every external mention (press, podcasts, LinkedIn, Crunchbase, G2/Clutch) and get those to link BACK — two-way linking proves scattered mentions are one entity.
+- Organization/Person schema with ONE consistent @id referenced site-wide, with sameAs to every verified profile (+ Wikidata if eligible — strongest entity signal).
+- Named, credentialed AUTHOR on every piece (real name + bio + Author/Person schema). Verifiable named authors earn citations at a MULTIPLE of anonymous ones — highest-leverage, lowest-effort change.
 
-3. STRUCTURED DATA (by citation impact):
-- FAQPage — highest impact (35–60% higher citation rates). Only mark up FAQs answered on the visible page; AI validates schema vs visible content and demotes mismatches.
-- HowTo — for step-by-step/tutorial queries.
-- Article + Author/Person — ties content to a named, credentialed author (E-E-A-T).
-- Organization + BreadcrumbList + DefinedTerm — identity + glossary clarity.
-- 3+ schema types together compound. No "AI-only" schema exists — standard schema.org is sufficient (Google's May-2026 guidance).
+PHASE 2 — CONTENT RESTRUCTURE (structure it the way retrieval reads — King/Indig):
+- Query fan-out: for each priority topic, answer every implicit sub-question (comparative, contextual, personalized) as its own standalone passage.
+- Answer placement (Indig "Ski Ramp"): 44% of ChatGPT citations come from the first 30% of the page, and within that 53% come from the MIDDLE of a paragraph, not the first sentence. Put a real, substantive answer early — a one-line TL;DR is not enough.
+- Self-contained passages: clean H2/H3 in question form ("How does X work", not "X Overview"); each chunk must make sense read in TOTAL isolation.
+- Atomic, brand-named facts (Bright Data): AI extracts self-contained 6–20 word sentences. Put your brand INSIDE the claim ("[Brand] users see 34% higher X"), not "our tool…", so the name travels with the quote. Fixes the "ghost citation" problem (61.7% of citations carry no brand name).
+- Comparison/evaluation format earns brand mentions at a higher rate than generic info — build honest X-vs-Y content (NOT self-promo listicles).
+- Real HTML tables outperform prose for extraction — convert comparisons/pricing/specs to tables.
+- Focused pages beat "ultimate guides" for ChatGPT — split shallow ten-subtopic pages into narrow standalone ones.
+- Schema: FAQPage (highest impact, only for FAQs visible on the page — AI validates schema vs visible content), HowTo (step-by-step), Article+Author. 3+ types together compound. Standard schema.org suffices; no "AI-only" schema.
 
-4. llms.txt — LOW PRIORITY: independent 2026 studies (Limy, OtterlyAI, ALLMO, SE Ranking) + Google's own guide show ~no measurable citation impact. Cheap to add, but NOT a strategy. Never treat it as a primary lever.
+PHASE 3 — OFF-SITE AUTHORITY (AI weights third-party mentions over your own claims):
+- Identify the 2–3 external domains ALREADY cited in your space (from the prompt audit) and pursue genuine placement there — beats generic mass PR.
+- Real Reddit/forum participation (not stealth marketing) — AI pulls from Reddit heavily; E-E-A-T rewards unfiltered community discussion.
+- Collect genuine reviews (G2/Capterra/Google Business Profile) — hard-to-fake third-party proof.
+- Multimodal: repurpose best content into video/podcast/image — modern models process transcripts and audio natively; captures mentions text-only rivals miss.
+- Freshness: most evaluation-stage citations come from pages updated within ~12 months — refresh evergreen content.
 
-5. OFF-SITE AUTHORITY (most-skipped, high-impact):
-- AI weights third-party mentions over brand-owned claims: Reddit, Quora, G2/Capterra, LinkedIn, trade press, podcasts.
-- Digital PR that earns real backlinks helps citations AND rankings (they mirror each other).
-- Freshness matters disproportionately: 83% of AI citations for evaluation-stage queries came from pages updated within 12 months. Refresh evergreen content.
-- Identify the 2–3 external domains already generating citations in the niche and pursue placement there.
+PHASE 4 — MEASUREMENT (most GEO programs fail here, not on strategy — Indig/Fishkin):
+- Separate CITATION rate (linked source) from MENTION rate (named in text), PER ENGINE. ChatGPT cites often but names rarely; Gemini names often but links rarely — a blended score hides this and drives the wrong fixes.
+- Run a FIXED prompt set weekly (not monthly) with rolling 4-week averages — AI output is probabilistic.
+- Confirm crawler VISITS in server logs (GPTBot/ClaudeBot/PerplexityBot) separately from citations — crawled ≠ cited.
+- Track conversion of AI-referred sessions (they convert 4–9x organic) — not just volume.
+- Aggregate influence over attribution (Fishkin): branded search, mention volume, audience growth — evidence of influence, not precise ROI.
 
-6. MEASUREMENT:
-- Run a fixed set of real buyer prompts across ChatGPT/Claude/Gemini/Perplexity regularly; each has a different retrieval stack, so a citation on one ≠ all.
-- GEO output is probabilistic — use rolling averages, not single spot-checks.
-- Track qualified leads from AI-referred sessions, not just visibility.
+PHASE 5 — ONGOING DISCIPLINE (permanent): refresh top pages every 3–6 months (update dateModified); re-run the full prompt audit + target-domain list monthly; screen every new page against the Phase 0 risk list before publishing; keep product/service data Clear, Complete, Consistent (Haynes "3 C's") for agentic AI; revisit the Entity Home + corroboration loop quarterly.
 
-OUTDATED / DON'T: keyword stuffing, exact-match keyword titles, mass low-quality backlinks, thin/programmatic content at scale, judging success by rankings alone, chasing every algo update, generic "what is X" content with no unique angle, treating llms.txt or "AI-specific schema" as citation levers.`;
+llms.txt — LOW PRIORITY: 2026 studies + Google show ~no citation impact. Cheap hygiene, never a primary lever.
+OUTDATED / DON'T: keyword stuffing, exact-match titles, mass low-quality backlinks, thin/programmatic content at scale, self-promo listicles, judging success by rankings alone, treating llms.txt or "AI-specific schema" as citation levers.`;
 
 // The concrete moves the autonomous loop can choose from. Phase 4 SEO/AEO
 // actions implement these; the loop prioritizes by `impact` and whether the
@@ -98,6 +102,33 @@ export const PLAYBOOK_ACTIONS: PlaybookAction[] = [
     addresses: "brand not recognized as an entity; inconsistent across queries",
   },
   {
+    id: "ssr-render",
+    layer: "technical",
+    title: "Server-side render key content",
+    description:
+      "AI crawlers read raw HTML and don't run JS. Ensure headings, copy, and FAQs appear in view-source (SSR/SSG), not injected client-side.",
+    impact: "high",
+    addresses: "content invisible to AI retrieval despite being on the page",
+  },
+  {
+    id: "entity-home",
+    layer: "entity_trust",
+    title: "Entity Home + self-corroboration loop",
+    description:
+      "Designate ONE canonical identity page (About/founder). Link it out to every external mention and get those to link back — two-way linking proves you're one entity.",
+    impact: "high",
+    addresses: "brand recognized inconsistently / not resolved as one entity",
+  },
+  {
+    id: "named-author",
+    layer: "entity_trust",
+    title: "Named, credentialed author on every page",
+    description:
+      "Replace anonymous/'Team' bylines with a real name, bio with credentials, and Author/Person schema. Named authors earn citations at a multiple of anonymous ones.",
+    impact: "high",
+    addresses: "trust/expertise-sensitive searches; low citation vs peers",
+  },
+  {
     id: "faq-schema",
     layer: "structured_data",
     title: "FAQPage schema on answer pages",
@@ -105,6 +136,33 @@ export const PLAYBOOK_ACTIONS: PlaybookAction[] = [
       "Add FAQPage schema for FAQs genuinely answered on the visible page. Highest-impact schema type for citations.",
     impact: "high",
     addresses: "absent on question-style / how-to searches",
+  },
+  {
+    id: "atomic-facts",
+    layer: "answer_first",
+    title: "Atomic, brand-named facts",
+    description:
+      "Rewrite key claims as self-contained 6–20 word sentences with the brand name INSIDE the claim, so the name travels when the AI extracts the sentence (fixes ghost citations).",
+    impact: "high",
+    addresses: "cited/mentioned without the brand name attached",
+  },
+  {
+    id: "answer-placement",
+    layer: "answer_first",
+    title: "Answer in the first 30%, mid-paragraph",
+    description:
+      "Move a real, substantive answer into the first third of the page and inside the paragraph body — not just a TL;DR line (Indig 'Ski Ramp' data).",
+    impact: "high",
+    addresses: "relevant page not quoted; answer buried below the fold",
+  },
+  {
+    id: "comparison-content",
+    layer: "answer_first",
+    title: "Honest comparison / evaluation content",
+    description:
+      "Build fair X-vs-Y and 'best tools for Z' content (NOT self-promo listicles) — comparative content earns brand mentions at a higher rate.",
+    impact: "medium",
+    addresses: "absent on comparison / 'best/alternatives' searches",
   },
   {
     id: "answer-first-rewrite",
@@ -140,6 +198,42 @@ export const PLAYBOOK_ACTIONS: PlaybookAction[] = [
       "For each target query, add well-covered sections answering the likely sub-queries the AI decomposes it into.",
     impact: "medium",
     addresses: "adjacent / comparison searches where competitors appear",
+  },
+  {
+    id: "focused-pages",
+    layer: "answer_first",
+    title: "Split ultimate guides into focused pages",
+    description:
+      "A page covering ten subtopics shallowly underperforms a narrow standalone page for ChatGPT citation — split it.",
+    impact: "medium",
+    addresses: "broad guide not cited on any of its subtopics",
+  },
+  {
+    id: "reviews",
+    layer: "off_site",
+    title: "Collect genuine third-party reviews",
+    description:
+      "Drive reviews on G2/Capterra/Google Business Profile — hard-to-fake proof that feeds both local SEO and AI trust.",
+    impact: "medium",
+    addresses: "low trust on evaluation/'best' searches vs reviewed rivals",
+  },
+  {
+    id: "reddit-presence",
+    layer: "off_site",
+    title: "Genuine Reddit / forum presence",
+    description:
+      "Participate for real (answer questions, link only when useful). AI pulls from Reddit heavily even when it doesn't formally cite it.",
+    impact: "medium",
+    addresses: "competitors surfacing via community threads you're absent from",
+  },
+  {
+    id: "multimodal",
+    layer: "off_site",
+    title: "Repurpose into video / audio",
+    description:
+      "Turn top content into a video explainer or podcast — multimodal models process transcripts/audio and capture mentions text-only rivals miss.",
+    impact: "medium",
+    addresses: "missing from multimodal / video-sourced answers",
   },
   {
     id: "freshness-refresh",

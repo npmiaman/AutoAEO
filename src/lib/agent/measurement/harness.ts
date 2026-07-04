@@ -19,6 +19,7 @@ import {
 } from "./competitors";
 import { fetchQueryVolumes } from "@/lib/agent/volume";
 import { getCachedResults, putCachedResult } from "./search-cache";
+import { runAeoAudit, auditSummary } from "./aeo-audit";
 
 // ─────────────────────────────────────────────────────────────────────
 // Visibility scan ("autoresearch"). Once per day per site, batched:
@@ -207,6 +208,11 @@ export async function finalizeScan(args: {
 
   const scored = outcomes.filter((o) => !o.error);
   const appearedQueries = scored.filter((o) => o.appeared).map((o) => o.query);
+  // Phase 4.1 — cited (linked source) vs named (mentioned) tracked separately.
+  const signals = {
+    cited: scored.filter((o) => o.cited).length,
+    named: scored.filter((o) => o.position !== null).length,
+  };
 
   // 2. Competitive intelligence.
   const competitors = buildCompetitiveMap(
@@ -240,13 +246,18 @@ export async function finalizeScan(args: {
   competitors.ourLogoUrl =
     (await resolveOurLogo(input.primaryDomain)) ?? undefined;
 
-  // 3. Diagnose.
+  // 3. Technical AEO/GEO audit (Phase 0–2 checks straight from the site), so the
+  // diagnosis can lead with real blockers (blocked crawler, no SSR, no schema).
+  const audit = await runAeoAudit(input.primaryDomain);
+
+  // 4. Diagnose — grounded in both the search outcomes and the audit.
   const diagnosis = await diagnose({
     brandName: input.brandName,
     domain: input.primaryDomain,
     business: input.business,
     outcomes,
     whitespace: competitors.focus.quickWins,
+    audit: auditSummary(audit),
   });
 
   // 4. Persist one measurement row.
@@ -266,6 +277,8 @@ export async function finalizeScan(args: {
         outcomes,
         diagnosis,
         competitors,
+        audit,
+        signals,
       }),
     });
   }
