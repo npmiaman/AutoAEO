@@ -19,23 +19,41 @@ const LOADING_MESSAGES = [
   "Almost ready…",
 ];
 
+const TYPE_MS = 45; // per-character typing speed
+const HOLD_MS = 1400; // pause on a fully-typed line before the next one
+
 function LoadingScreen() {
   const [i, setI] = useState(0);
+  const [typed, setTyped] = useState("");
+
   useEffect(() => {
-    const t = setInterval(
-      () => setI((n) => (n + 1) % LOADING_MESSAGES.length),
-      2600,
+    const full = LOADING_MESSAGES[i];
+    setTyped("");
+    let n = 0;
+    const typing = setInterval(() => {
+      n += 1;
+      setTyped(full.slice(0, n));
+      if (n >= full.length) clearInterval(typing);
+    }, TYPE_MS);
+    const advance = setTimeout(
+      () => setI((prev) => (prev + 1) % LOADING_MESSAGES.length),
+      full.length * TYPE_MS + HOLD_MS,
     );
-    return () => clearInterval(t);
-  }, []);
+    return () => {
+      clearInterval(typing);
+      clearTimeout(advance);
+    };
+  }, [i]);
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background px-6 text-center">
       <PixelPigeon size={72} />
-      <p
-        key={i}
-        className="animate-in fade-in font-heading text-xl tracking-tight text-foreground duration-500"
-      >
-        {LOADING_MESSAGES[i]}
+      <p className="flex min-h-7 items-center font-heading text-xl tracking-tight text-foreground">
+        {typed}
+        <span
+          aria-hidden
+          className="ml-0.5 inline-block h-5 w-px animate-pulse bg-foreground"
+        />
       </p>
       <p className="text-sm text-muted-foreground">
         This takes a minute — hang tight while Pigeon analyses your site.
