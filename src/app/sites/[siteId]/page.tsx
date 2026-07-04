@@ -86,6 +86,7 @@ export default async function SitePage({
       {detail ? (
         <ScanReport
           detail={detail}
+          siteId={siteId}
           appeared={latest.appeared}
           total={latest.total}
           ranAt={latest.createdAt}

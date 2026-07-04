@@ -62,6 +62,10 @@ export interface CompetitiveMap {
     logoUrl?: string;
   }>;
   strongCompetitors: string[]; // recurring winners (context for focus signals)
+  // Our own verified logo, for the "You" bar in the chart. Resolved the same way
+  // competitors' are (see resolveOurLogo); can be re-fetched on its own without
+  // rerunning the whole scan.
+  ourLogoUrl?: string;
   focus: FocusSignals;
   // Search demand keyed by query — attached after the map is built. Focus
   // lists are re-sorted by volume so high-demand gaps come first.
@@ -465,6 +469,22 @@ async function logoCandidates(domain: string): Promise<string[]> {
 async function resolveLogo(domain: string): Promise<string | null> {
   for (const url of await logoCandidates(domain)) {
     if (await isValidImage(url)) return url;
+  }
+  return null;
+}
+
+/**
+ * Resolve OUR OWN verified logo from our domain. Retries the whole candidate
+ * chain (up to `attempts` passes) so a transient failure doesn't leave the "You"
+ * bar blank. Standalone so it can be re-run on its own — no full rescan needed.
+ */
+export async function resolveOurLogo(
+  domain: string,
+  attempts = 3,
+): Promise<string | null> {
+  for (let pass = 0; pass < attempts; pass++) {
+    const url = await resolveLogo(domain);
+    if (url) return url;
   }
   return null;
 }

@@ -14,6 +14,7 @@ import {
   applyStrength,
   analyzeCompetitorsBasis,
   resolveCompetitorLogos,
+  resolveOurLogo,
   type CompetitiveMap,
 } from "./competitors";
 import { fetchQueryVolumes } from "@/lib/agent/volume";
@@ -216,6 +217,8 @@ export async function finalizeScan(args: {
     });
   }
   await resolveCompetitorLogos(competitors, 8);
+  competitors.ourLogoUrl =
+    (await resolveOurLogo(input.primaryDomain)) ?? undefined;
 
   // 3. Diagnose.
   const diagnosis = await diagnose({

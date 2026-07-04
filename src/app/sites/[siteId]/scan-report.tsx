@@ -4,6 +4,8 @@ import type { CompetitiveMap } from "@/lib/agent/measurement/competitors";
 import type { Diagnosis } from "@/lib/agent/measurement/diagnosis";
 import { CompetitorChart, type ChartBar } from "./competitor-chart";
 import { TopOpportunities, type Opportunity } from "./top-opportunities";
+import { RefreshLogoButton } from "./refresh-logo-button";
+import { refreshLogo } from "./actions";
 
 export interface ScanDetail {
   competitors: CompetitiveMap;
@@ -64,6 +66,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 export function ScanReport({
   detail,
+  siteId,
   appeared,
   total,
   ranAt,
@@ -71,6 +74,7 @@ export function ScanReport({
   ourDomain,
 }: {
   detail: ScanDetail;
+  siteId: string;
   appeared: number;
   total: number;
   ranAt: Date | null;
@@ -87,6 +91,12 @@ export function ScanReport({
     .sort((a, b) => demandNum(c, b) - demandNum(c, a))
     .map((q) => ({ query: q, demand: demandTag(c, q) }));
 
+  // Our own bar uses our extracted+verified logo; fall back to a plain favicon
+  // only until the "get my logo" re-fetch lands one.
+  const ourLogoUrl =
+    c.ourLogoUrl ??
+    `https://www.google.com/s2/favicons?domain=${ourDomain}&sz=128`;
+
   // Chart data: top competitors + your own bar, ordered by presence count.
   const bars: ChartBar[] = [
     ...c.competitors.slice(0, 6).map((comp) => ({
@@ -98,7 +108,7 @@ export function ScanReport({
     {
       name: ourName,
       count: appeared,
-      logoUrl: `https://www.google.com/s2/favicons?domain=${ourDomain}&sz=128`,
+      logoUrl: ourLogoUrl,
       isUs: true,
     },
   ].sort((a, b) => b.count - a.count);
@@ -141,7 +151,14 @@ export function ScanReport({
                 No recurring competitors surfaced.
               </p>
             ) : (
-              <CompetitorChart bars={bars} maxCount={maxCompCount} />
+              <>
+                <CompetitorChart bars={bars} maxCount={maxCompCount} />
+                {!c.ourLogoUrl && (
+                  <form action={refreshLogo.bind(null, siteId)}>
+                    <RefreshLogoButton />
+                  </form>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
