@@ -62,6 +62,7 @@ export async function ensureSiteForShop(shopId: string): Promise<string> {
 export async function provisionGenericSite(args: {
   userId: string;
   url: string;
+  name?: string; // business/company name (from onboarding) — overrides the crawled title
   description?: string; // what the site/business does — drives search generation
 }): Promise<{ siteId: string; apiKey: string }> {
   const profile = await fetchSiteProfile(args.url);
@@ -90,13 +91,28 @@ export async function provisionGenericSite(args: {
     id,
     userId: args.userId,
     platform: "generic",
-    name: profile.name,
+    name: args.name?.trim() || profile.name,
     url: profile.url,
     primaryDomain: profile.primaryDomain,
     apiKey,
     configJson: JSON.stringify(config),
   });
   return { siteId: id, apiKey };
+}
+
+/**
+ * The user's single website (one per user). Returns its id or null. Used to
+ * route: has a site → their dashboard; none → onboarding.
+ */
+export async function userGenericSiteId(userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ id: siteTable.id })
+    .from(siteTable)
+    .where(
+      and(eq(siteTable.userId, userId), eq(siteTable.platform, "generic")),
+    )
+    .limit(1);
+  return row?.id ?? null;
 }
 
 /** All sites whose loop is due to run (not paused). */

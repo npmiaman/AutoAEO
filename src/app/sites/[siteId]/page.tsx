@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, desc, eq } from "drizzle-orm";
@@ -51,13 +50,7 @@ export default async function SitePage({
       {scanning && <ScanPoller siteId={siteId} />}
 
       <div>
-        <Link
-          href="/dashboard"
-          className="text-sm text-muted-foreground hover:underline"
-        >
-          ← Your websites
-        </Link>
-        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="font-heading text-3xl tracking-tight">{site.name}</h1>
             <p className="mt-1 text-sm text-muted-foreground">

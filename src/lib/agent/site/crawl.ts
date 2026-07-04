@@ -168,6 +168,18 @@ export async function crawlSite(root: string): Promise<SiteResource[]> {
   return out;
 }
 
+/**
+ * Is this a real, reachable website? Fetches the homepage and requires a 2xx
+ * that actually returns HTML — so a well-formed but made-up domain (which
+ * fetchSiteProfile would happily accept) is rejected at onboarding.
+ */
+export async function verifySiteReachable(root: string): Promise<boolean> {
+  const page = await fetchPage(root);
+  if (!page) return false;
+  // fetchPage already required res.ok; confirm the body looks like a web page.
+  return /<html[\s>]|<!doctype html/i.test(page.text.slice(0, 4000));
+}
+
 export async function fetchSiteProfile(root: string): Promise<{
   name: string;
   url: string;
