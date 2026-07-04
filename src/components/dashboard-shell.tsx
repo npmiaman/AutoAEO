@@ -39,8 +39,8 @@ export function DashboardShell({
       <header className="border-b">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <PixelPigeon size={22} />
-            <span className="text-sm font-semibold tracking-tight">Pigeon</span>
+            <PixelPigeon size={36} />
+            <span className="text-sm font-semibold tracking-tight">[P]</span>
           </Link>
 
           <DropdownMenu>

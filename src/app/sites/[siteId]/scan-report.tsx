@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { CompetitiveMap } from "@/lib/agent/measurement/competitors";
 import type { Diagnosis } from "@/lib/agent/measurement/diagnosis";
 import { CompetitorChart, type ChartBar } from "./competitor-chart";
+import { TopOpportunities, type Opportunity } from "./top-opportunities";
 
 export interface ScanDetail {
   competitors: CompetitiveMap;
@@ -14,6 +15,10 @@ function demandTag(c: CompetitiveMap, q: string): string | null {
   const d = c.demand?.[q];
   if (!d || d.monthlyVolume == null) return null;
   return `~${d.monthlyVolume}/mo${d.source === "llm-estimate" ? " est" : ""}`;
+}
+
+function demandNum(c: CompetitiveMap, q: string): number {
+  return c.demand?.[q]?.monthlyVolume ?? 0;
 }
 
 // A stat tile — the right form for a single magnitude/headline (no chart).
@@ -57,32 +62,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-function QuickWinList({
-  queries,
-  c,
-}: {
-  queries: string[];
-  c: CompetitiveMap;
-}) {
-  return (
-    <div className="space-y-2">
-      {queries.map((q) => (
-        <div
-          key={q}
-          className="flex items-center justify-between gap-3 text-[13px]"
-        >
-          <span className="truncate">{q}</span>
-          {demandTag(c, q) && (
-            <Badge variant="secondary" className="shrink-0 text-[10px]">
-              {demandTag(c, q)}
-            </Badge>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function ScanReport({
   detail,
   appeared,
@@ -102,7 +81,11 @@ export function ScanReport({
   const dx = detail.diagnosis;
   const pct = total ? Math.round((appeared / total) * 100) : 0;
   const gaps = c.focus.ourGaps;
-  const quickWins = c.focus.quickWins;
+  // Openings with no strong rival, ranked by search demand so the top few are
+  // genuinely where we have the most opportunity to win.
+  const opportunities: Opportunity[] = [...c.focus.quickWins]
+    .sort((a, b) => demandNum(c, b) - demandNum(c, a))
+    .map((q) => ({ query: q, demand: demandTag(c, q) }));
 
   // Chart data: top competitors + your own bar, ordered by presence count.
   const bars: ChartBar[] = [
@@ -132,9 +115,9 @@ export function ScanReport({
           meter={total ? appeared / total : 0}
         />
         <Stat
-          label="Quick wins"
-          value={quickWins.length}
-          sub="winnable — no strong rival"
+          label="Opportunities"
+          value={opportunities.length}
+          sub="openings with no strong rival"
         />
         <Stat
           label="Missing"
@@ -148,7 +131,7 @@ export function ScanReport({
         />
       </div>
 
-      {/* ── Who's winning + Quick wins — side by side in one row ──── */}
+      {/* ── Who's winning + Where to focus — side by side in one row ─ */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardContent className="space-y-5 py-5">
@@ -165,27 +148,14 @@ export function ScanReport({
 
         <Card>
           <CardContent className="space-y-3 py-5">
-            <SectionTitle>Quick wins to grab first</SectionTitle>
-            {quickWins.length === 0 ? (
+            <SectionTitle>Where to focus first</SectionTitle>
+            {opportunities.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No open searches — you&rsquo;re up against established
                 competitors everywhere. See &ldquo;What to fix&rdquo; below.
               </p>
             ) : (
-              <>
-                <QuickWinList queries={quickWins.slice(0, 6)} c={c} />
-                {quickWins.length > 6 && (
-                  <details className="group">
-                    <summary className="cursor-pointer list-none pt-1 text-xs font-medium text-muted-foreground hover:text-foreground">
-                      See all {quickWins.length} quick wins
-                      <span className="group-open:hidden"> →</span>
-                    </summary>
-                    <div className="pt-3">
-                      <QuickWinList queries={quickWins.slice(6)} c={c} />
-                    </div>
-                  </details>
-                )}
-              </>
+              <TopOpportunities items={opportunities} topN={5} />
             )}
           </CardContent>
         </Card>
