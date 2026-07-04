@@ -26,6 +26,11 @@ export interface SiteConfig {
   cadenceMinutes: number;
   // Kill switch — pause the loop without deleting the site.
   paused: boolean;
+  // The site's current search set, reused across a scan "session" so a stopped
+  // scan resumes on the SAME queries (matching the per-query grounding cache)
+  // instead of regenerating a different set. Refreshed after the set's TTL.
+  searchSet?: string[];
+  searchSetAt?: number; // epoch ms when searchSet was generated
 }
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {

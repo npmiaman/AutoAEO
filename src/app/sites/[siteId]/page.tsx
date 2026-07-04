@@ -6,8 +6,6 @@ import { db } from "@/lib/db";
 import { measurement, site as siteTable } from "@/lib/db/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { runningScanJob } from "@/lib/agent/measurement/batch-scan";
-import { runScan } from "./actions";
-import { RunScanButton } from "./run-scan-button";
 import { ScanReport, type ScanDetail } from "./scan-report";
 import { ScanPoller } from "./scan-poller";
 
@@ -50,17 +48,10 @@ export default async function SitePage({
       {scanning && <ScanPoller siteId={siteId} />}
 
       <div>
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="font-heading text-3xl tracking-tight">{site.name}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {site.primaryDomain}
-            </p>
-          </div>
-          <form action={runScan.bind(null, siteId)}>
-            <RunScanButton hasScan={!!detail} scanning={scanning} />
-          </form>
-        </div>
+        <h1 className="font-heading text-3xl tracking-tight">{site.name}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {site.primaryDomain}
+        </p>
       </div>
 
       {scanning && (

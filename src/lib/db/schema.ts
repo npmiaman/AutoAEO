@@ -268,13 +268,30 @@ export const scanJob = sqliteTable("scan_job", {
     .references(() => site.id, { onDelete: "cascade" }),
   status: text("status").notNull(), // 'running' | 'completed' | 'failed'
   batchId: text("batchId").notNull(), // OpenAI batch id
-  searchesJson: text("searchesJson").notNull(), // the exact searches submitted
+  searchesJson: text("searchesJson").notNull(), // the FULL search set the scan covers
+  // The subset actually submitted to this batch (the cache-misses). Null → all of
+  // searchesJson was submitted. At finalize we merge batch results with cached ones.
+  submittedJson: text("submittedJson"),
   measurementId: text("measurementId"), // set when finalized
   error: text("error"),
   createdAt: integer("createdAt", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),
   completedAt: integer("completedAt", { mode: "timestamp" }),
+});
+
+// Grounded-search result cache. A query's grounded answer is site-independent,
+// so we key by (engine, normalized query) and reuse it within a freshness TTL.
+// This makes scans resumable — completed calls survive a crash — and cheap when
+// a scan runs again soon after (already-run queries come straight from here).
+export const searchCache = sqliteTable("search_cache", {
+  key: text("key").primaryKey(), // `${engine}::${normalizedQuery}`
+  engine: text("engine").notNull(),
+  query: text("query").notNull(),
+  resultJson: text("resultJson").notNull(), // EngineQueryResult
+  createdAt: integer("createdAt", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
 });
 
 // A single proposed change inside an agent run. User reviews/approves these.

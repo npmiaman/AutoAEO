@@ -18,6 +18,7 @@ import {
   type CompetitiveMap,
 } from "./competitors";
 import { fetchQueryVolumes } from "@/lib/agent/volume";
+import { getCachedResults, putCachedResult } from "./search-cache";
 
 // ─────────────────────────────────────────────────────────────────────
 // Visibility scan ("autoresearch"). Once per day per site, batched:
@@ -149,12 +150,31 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
   ).slice(0, MAX_SEARCHES);
   if (searches.length === 0) throw new Error("No searches to run.");
 
-  // Every (engine × search) is one grounded call (sync path).
+  // Every (engine × search) is one grounded call (sync path). Cache-backed: a
+  // fresh cached result is reused (so a stopped scan resumes instead of redoing
+  // completed calls), and every fresh call is written back as it lands.
+  const cacheByEngine = new Map<string, Map<string, EngineQueryResult>>();
+  await Promise.all(
+    engines.map(async (engine) => {
+      cacheByEngine.set(
+        engine.name,
+        await getCachedResults(engine.name, searches),
+      );
+    }),
+  );
   const jobs = engines.flatMap((engine) =>
     searches.map((query) => ({ engine, query })),
   );
-  const raw: EngineQueryResult[] = await mapLimit(jobs, CONCURRENCY, ({ engine, query }) =>
-    engine.query(query),
+  const raw: EngineQueryResult[] = await mapLimit(
+    jobs,
+    CONCURRENCY,
+    async ({ engine, query }) => {
+      const hit = cacheByEngine.get(engine.name)?.get(query.trim().toLowerCase());
+      if (hit) return hit;
+      const res = await engine.query(query);
+      await putCachedResult(engine.name, query, res);
+      return res;
+    },
   );
 
   return finalizeScan({
