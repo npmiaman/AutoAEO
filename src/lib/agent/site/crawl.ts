@@ -148,6 +148,35 @@ function extract(url: string, html: string): SiteResource {
   };
 }
 
+/**
+ * Fetch up to `max` pages of a site as RAW HTML (sitemap-driven, homepage
+ * first) — for analysis that needs the full markup (JSON-LD, headings, script
+ * tags), which crawlSite strips away.
+ */
+export async function fetchSitePages(
+  root: string,
+  max = 12,
+): Promise<Array<{ url: string; html: string }>> {
+  const discovered = await discoverUrls(root);
+  // Homepage first, then discovered pages, de-duped, capped.
+  const urls = [...new Set([root, ...discovered])].slice(0, max);
+  const out: Array<{ url: string; html: string }> = [];
+  const CONCURRENCY = 4;
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, urls.length) }, () =>
+      (async () => {
+        while (cursor < urls.length) {
+          const url = urls[cursor++];
+          const page = await fetchPage(url);
+          if (page) out.push({ url: page.finalUrl || url, html: page.text });
+        }
+      })(),
+    ),
+  );
+  return out;
+}
+
 export async function crawlSite(root: string): Promise<SiteResource[]> {
   const urls = await discoverUrls(root);
   const out: SiteResource[] = [];

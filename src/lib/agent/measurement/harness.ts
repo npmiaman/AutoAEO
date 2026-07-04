@@ -20,6 +20,7 @@ import {
 import { fetchQueryVolumes } from "@/lib/agent/volume";
 import { getCachedResults, putCachedResult } from "./search-cache";
 import { runAeoAudit, auditSummary } from "./aeo-audit";
+import { generateFixPack } from "./fixpack";
 
 // ─────────────────────────────────────────────────────────────────────
 // Visibility scan ("autoresearch"). Once per day per site, batched:
@@ -260,6 +261,20 @@ export async function finalizeScan(args: {
     audit: auditSummary(audit),
   });
 
+  // 5. Fix Pack — generate the concrete, paste-ready artifacts (schema, FAQs,
+  // atomic facts, rewrites) that close the audit fails + the biggest gaps.
+  const targetQueries = [
+    ...competitors.focus.quickWins,
+    ...diagnosis.missingOn,
+  ].slice(0, 8);
+  const fixPack = await generateFixPack({
+    brandName: input.brandName,
+    domain: input.primaryDomain,
+    business: input.business,
+    audit,
+    topQueries: targetQueries,
+  });
+
   // 4. Persist one measurement row.
   let measurementId: string | null = null;
   if (input.persist !== false) {
@@ -279,6 +294,7 @@ export async function finalizeScan(args: {
         competitors,
         audit,
         signals,
+        fixPack,
       }),
     });
   }

@@ -1,15 +1,17 @@
 import "server-only";
+import { fetchSitePages } from "@/lib/agent/site/crawl";
 
 // ─────────────────────────────────────────────────────────────────────
 // Technical AEO/GEO audit — the automatable checks from the playbook's Phase 0
-// (foundation) and Phases 1–2 (entity + structured data), run straight from a
-// URL. Everything here is verifiable from robots.txt + the homepage HTML, so it
-// runs on every scan and grounds the diagnosis in the site's real technical
-// state (e.g. "GPTBot blocked → unblock before any content work").
+// (foundation) and Phases 1–2 (entity + structured data). It crawls the whole
+// site (sitemap-driven, up to N pages) plus robots.txt, so schema/author/SSR
+// checks reflect the ENTIRE site, not just the homepage — e.g. FAQ schema on a
+// deep help page still counts. Runs on every scan and grounds the diagnosis in
+// the site's real technical state ("GPTBot blocked → unblock before content").
 //
 // Manual-only playbook items (self-promo listicle risk, Reddit presence, the
 // weekly cross-engine prompt cadence) are covered by the strategy brief, not
-// here — they can't be judged reliably from one fetch.
+// here — they can't be judged reliably from a crawl.
 // ─────────────────────────────────────────────────────────────────────
 
 export type AuditStatus = "pass" | "warn" | "fail";
@@ -25,6 +27,7 @@ export interface AuditCheck {
 
 export interface AeoAudit {
   url: string;
+  pagesScanned: number; // how many pages the audit actually fetched
   checks: AuditCheck[];
   passed: number; // # of non-fail checks (pass or warn)
   total: number;
@@ -179,11 +182,26 @@ export async function runAeoAudit(root: string): Promise<AeoAudit> {
     /* keep url */
   }
 
-  const [robots, home] = await Promise.all([
+  // Fetch robots.txt + the whole site (homepage first, sitemap-driven).
+  const [robots, pages] = await Promise.all([
     get(`${origin}/robots.txt`),
-    get(url),
+    fetchSitePages(url, 12),
   ]);
+  const home = pages[0] ? { status: 200, text: pages[0].html } : await get(url);
   const checks: AuditCheck[] = [];
+
+  // Aggregate schema across EVERY crawled page.
+  const perPage = pages.map((p) => ({ url: p.url, s: extractSchema(p.html) }));
+  const anyOrgId = perPage.some((p) => p.s.hasOrgId);
+  const anyOrg = perPage.some((p) =>
+    [...p.s.types].some((t) => /organization|localbusiness/i.test(t)),
+  );
+  const maxSameAs = Math.max(0, ...perPage.map((p) => p.s.sameAs));
+  const authorPage = perPage.find((p) => p.s.authorName);
+  const schemaTypes = new Set<string>();
+  perPage.forEach((p) => p.s.types.forEach((t) => schemaTypes.add(t)));
+  const hasType = (re: RegExp) => [...schemaTypes].some((t) => re.test(t));
+  const thinPages = pages.filter((p) => visibleText(p.html).length < 500).length;
 
   // Phase 0.1 — AI crawler access
   if (robots && robots.status < 400 && robots.text.trim()) {
@@ -217,26 +235,28 @@ export async function runAeoAudit(root: string): Promise<AeoAudit> {
     });
   }
 
-  // Phase 0.2 — server-side rendering
+  // Phase 0.2 — server-side rendering (across every crawled page)
   if (home && home.status < 400) {
-    const text = visibleText(home.text);
-    const hasHeadings = /<h[12][\s>]/i.test(home.text);
+    const homeText = visibleText(home.text);
     const emptyRoot =
       /<(div|main)[^>]+id=["'](root|app|__next)["'][^>]*>\s*<\/(div|main)>/i.test(
         home.text,
       );
-    const thin = text.length < 500 || emptyRoot;
+    const homeThin = homeText.length < 500 || emptyRoot;
     checks.push({
       id: "ssr-render",
       phase: 0,
       label: "Server-side rendered content",
-      status: thin ? "fail" : hasHeadings ? "pass" : "warn",
-      detail: thin
-        ? `Only ~${text.length} chars of text in raw HTML${emptyRoot ? " (empty app root)" : ""} — content looks client-rendered.`
-        : `~${text.length} chars of real content in raw HTML.`,
-      fix: thin
-        ? "AI crawlers don't run JavaScript. Server-render or pre-render your key content so it's in view-source."
-        : undefined,
+      status: homeThin || thinPages > pages.length / 2 ? "fail" : thinPages ? "warn" : "pass",
+      detail: homeThin
+        ? `Homepage has only ~${homeText.length} chars of text in raw HTML${emptyRoot ? " (empty app root)" : ""} — looks client-rendered.`
+        : thinPages
+          ? `${thinPages}/${pages.length} crawled pages are thin in raw HTML.`
+          : `Real content present in raw HTML across all ${pages.length} pages.`,
+      fix:
+        homeThin || thinPages
+          ? "AI crawlers don't run JavaScript. Server-render or pre-render page content so it's in view-source."
+          : undefined,
     });
   } else {
     checks.push({
@@ -244,26 +264,23 @@ export async function runAeoAudit(root: string): Promise<AeoAudit> {
       phase: 0,
       label: "Server-side rendered content",
       status: "warn",
-      detail: "Couldn't fetch the homepage to check rendering.",
+      detail: "Couldn't fetch pages to check rendering.",
     });
   }
 
-  // Phases 1 & 2 — entity + structured data (only when we have the HTML)
-  if (home && home.status < 400) {
-    const s = extractSchema(home.text);
-    const has = (re: RegExp) => [...s.types].some((t) => re.test(t));
-
+  // Phases 1 & 2 — entity + structured data, aggregated across the whole site
+  if (pages.length) {
     checks.push({
       id: "org-schema",
       phase: 1,
       label: "Organization identity (schema @id)",
-      status: s.hasOrgId ? "pass" : has(/organization|localbusiness/i) ? "warn" : "fail",
-      detail: s.hasOrgId
+      status: anyOrgId ? "pass" : anyOrg ? "warn" : "fail",
+      detail: anyOrgId
         ? "Organization schema with a stable @id is present."
-        : has(/organization|localbusiness/i)
+        : anyOrg
           ? "Organization schema present but has no @id to reference site-wide."
-          : "No Organization/Person schema found.",
-      fix: s.hasOrgId
+          : "No Organization/Person schema found on any crawled page.",
+      fix: anyOrgId
         ? undefined
         : "Add Organization (or Person) schema with one consistent @id referenced site-wide, plus sameAs to your verified profiles.",
     });
@@ -272,10 +289,10 @@ export async function runAeoAudit(root: string): Promise<AeoAudit> {
       id: "corroboration",
       phase: 1,
       label: "Entity corroboration (sameAs)",
-      status: s.sameAs >= 3 ? "pass" : s.sameAs > 0 ? "warn" : "fail",
-      detail: `${s.sameAs} sameAs link(s) to external profiles.`,
+      status: maxSameAs >= 3 ? "pass" : maxSameAs > 0 ? "warn" : "fail",
+      detail: `${maxSameAs} sameAs link(s) to external profiles.`,
       fix:
-        s.sameAs >= 3
+        maxSameAs >= 3
           ? undefined
           : "Add sameAs links to LinkedIn, Crunchbase, G2/Clutch, Wikidata etc., and link your Entity Home out to those mentions (and back).",
     });
@@ -284,34 +301,44 @@ export async function runAeoAudit(root: string): Promise<AeoAudit> {
       id: "named-author",
       phase: 1,
       label: "Named author",
-      status: s.authorName ? "pass" : "warn",
-      detail: s.authorName
-        ? `Named author in schema: ${s.authorName}.`
-        : "No named author found in page schema.",
-      fix: s.authorName
+      status: authorPage ? "pass" : "warn",
+      detail: authorPage
+        ? `Named author in schema: ${authorPage.s.authorName}.`
+        : "No named author found in schema on any crawled page.",
+      fix: authorPage
         ? undefined
         : "Put a real, credentialed author (name + bio + Author/Person schema) on content — named authors earn citations at a multiple of anonymous ones.",
     });
 
+    const answerFound = ["FAQPage", "HowTo", "Article", "BlogPosting"].filter((t) =>
+      hasType(new RegExp(t, "i")),
+    );
     checks.push({
       id: "answer-schema",
       phase: 2,
       label: "FAQ / HowTo / Article schema",
-      status: has(/faqpage|howto/i) ? "pass" : has(/article|blogposting/i) ? "warn" : "fail",
-      detail: (() => {
-        const found = ["FAQPage", "HowTo", "Article", "BlogPosting"].filter((t) =>
-          has(new RegExp(t, "i")),
-        );
-        return found.length ? `Found: ${found.join(", ")}.` : "No FAQPage/HowTo/Article schema found.";
-      })(),
-      fix: has(/faqpage|howto/i)
+      status: hasType(/faqpage|howto/i)
+        ? "pass"
+        : hasType(/article|blogposting/i)
+          ? "warn"
+          : "fail",
+      detail: answerFound.length
+        ? `Found across the site: ${answerFound.join(", ")}.`
+        : "No FAQPage/HowTo/Article schema found on any crawled page.",
+      fix: hasType(/faqpage|howto/i)
         ? undefined
         : "Add FAQPage schema to FAQs answered on the visible page (highest-impact type); layer HowTo + Article/Author where relevant. 3+ types compound.",
     });
   }
 
   const passed = checks.filter((c) => c.status !== "fail").length;
-  return { url, checks, passed, total: checks.length };
+  return {
+    url,
+    pagesScanned: pages.length,
+    checks,
+    passed,
+    total: checks.length,
+  };
 }
 
 /** One-line-per-check summary for injecting into the diagnosis prompt. */

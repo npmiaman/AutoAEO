@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { CompetitiveMap } from "@/lib/agent/measurement/competitors";
 import type { Diagnosis } from "@/lib/agent/measurement/diagnosis";
 import type { AeoAudit, AuditStatus } from "@/lib/agent/measurement/aeo-audit";
+import type { FixArtifact } from "@/lib/agent/measurement/fixpack";
 import { CompetitorChart, type ChartBar } from "./competitor-chart";
 import { TopOpportunities, type Opportunity } from "./top-opportunities";
 import { RefreshLogoButton } from "./refresh-logo-button";
@@ -14,6 +15,7 @@ export interface ScanDetail {
   engines?: string[];
   audit?: AeoAudit;
   signals?: { cited: number; named: number };
+  fixPack?: FixArtifact[];
 }
 
 const AUDIT_DOT: Record<AuditStatus, string> = {
@@ -21,6 +23,51 @@ const AUDIT_DOT: Record<AuditStatus, string> = {
   warn: "bg-amber-500",
   fail: "bg-red-500",
 };
+
+// Concrete, paste-ready artifacts the agent generated to close the gaps — real
+// JSON-LD, FAQ blocks, atomic facts, rewrites. Grouped so the user can copy each.
+function FixPackCard({ fixes }: { fixes: FixArtifact[] }) {
+  return (
+    <Card>
+      <CardContent className="space-y-4 py-5">
+        <div>
+          <SectionTitle>Ready-to-apply fixes</SectionTitle>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Generated for your site — paste these in to close the gaps above.
+          </p>
+        </div>
+        <div className="space-y-3">
+          {fixes.map((f, i) => (
+            <details key={i} className="group rounded-lg border">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  {f.title}
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    phase {f.phase}
+                  </span>
+                </span>
+                <span className="text-muted-foreground transition-transform group-open:rotate-180">
+                  ▾
+                </span>
+              </summary>
+              <div className="border-t px-4 py-3">
+                {f.kind === "content" ? (
+                  <p className="whitespace-pre-wrap text-[13px] leading-relaxed">
+                    {f.body}
+                  </p>
+                ) : (
+                  <pre className="overflow-x-auto rounded-md bg-muted/60 p-3 text-xs leading-relaxed">
+                    <code>{f.body}</code>
+                  </pre>
+                )}
+              </div>
+            </details>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 // The technical AEO/GEO readiness checks (Phase 0–2 of the playbook), run from
 // the site itself. Fails are the things to fix before any content work.
@@ -30,7 +77,15 @@ function AeoAuditCard({ audit }: { audit: AeoAudit }) {
     <Card>
       <CardContent className="space-y-4 py-5">
         <div className="flex items-center justify-between gap-3">
-          <SectionTitle>AI-readiness checks</SectionTitle>
+          <div>
+            <SectionTitle>AI-readiness checks</SectionTitle>
+            {audit.pagesScanned > 0 && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                crawled {audit.pagesScanned} page
+                {audit.pagesScanned === 1 ? "" : "s"}
+              </p>
+            )}
+          </div>
           <Badge variant={fails ? "destructive" : "secondary"} className="text-[10px]">
             {audit.passed}/{audit.total} passing
           </Badge>
@@ -255,6 +310,11 @@ export function ScanReport({
       {/* ── Technical AEO/GEO readiness (playbook Phase 0–2) ─────── */}
       {detail.audit && detail.audit.checks.length > 0 && (
         <AeoAuditCard audit={detail.audit} />
+      )}
+
+      {/* ── Ready-to-apply fixes the agent generated ─────────────── */}
+      {detail.fixPack && detail.fixPack.length > 0 && (
+        <FixPackCard fixes={detail.fixPack} />
       )}
 
       {/* ── Full breakdown — tucked away so the page isn't a wall ── */}
