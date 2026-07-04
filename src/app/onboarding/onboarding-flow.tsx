@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import PixelPigeon from "@/components/PixelPigeon";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,7 @@ function LoadingScreen() {
 const fieldBase =
   "rounded-xl border-transparent bg-muted/60 px-4 text-sm shadow-none placeholder:text-muted-foreground/70 focus-visible:bg-background";
 const fieldClass = `h-11 ${fieldBase}`;
-const textareaClass = `${fieldBase} min-h-24 resize-none py-3 leading-relaxed`;
+const textareaClass = `${fieldBase} block min-h-32 w-full resize-y py-3 leading-relaxed`;
 
 export function OnboardingFlow({ defaultName }: { defaultName?: string }) {
   const router = useRouter();
@@ -74,68 +75,78 @@ export function OnboardingFlow({ defaultName }: { defaultName?: string }) {
   if (phase === "loading") return <LoadingScreen />;
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-12">
-      <div className="flex flex-col items-center text-center">
-        <PixelPigeon size={44} />
-        <h1 className="mt-4 font-heading text-3xl tracking-tight">
+    <main className="flex flex-1 flex-col py-8">
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center gap-3 self-start hover:opacity-80"
+      >
+        <PixelPigeon size={32} />
+        <span className="text-lg font-semibold tracking-tight">
+          <span className="text-muted-foreground">[</span>P
+          <span className="text-muted-foreground">]</span>igeon
+        </span>
+      </Link>
+
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center pb-16">
+        <h1 className="text-3xl font-bold tracking-tight">
           Tell us about your business
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {defaultName ? `Welcome, ${defaultName}. ` : ""}
           Pigeon uses this to measure where you show up in AI search.
         </p>
+
+        <form onSubmit={onSubmit} className="mt-8 space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="name">Business name</Label>
+            <Input
+              id="name"
+              required
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Acme Studio"
+              className={fieldClass}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="url">Website</Label>
+            <Input
+              id="url"
+              required
+              inputMode="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="yourbusiness.com"
+              className={fieldClass}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="description">What does your business do?</Label>
+            <textarea
+              id="description"
+              required
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. a marketplace to hire vetted creative freelancers for design, video and photography"
+              className={textareaClass}
+            />
+            <p className="text-xs text-muted-foreground">
+              The clearer this is, the better the searches we test you on.
+            </p>
+          </div>
+
+          <Button
+            type="submit"
+            className="h-11 w-full rounded-full text-sm font-semibold"
+          >
+            Analyse my site
+          </Button>
+        </form>
       </div>
-
-      <form onSubmit={onSubmit} className="mt-8 space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="name">Business name</Label>
-          <Input
-            id="name"
-            required
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Acme Studio"
-            className={fieldClass}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="url">Website</Label>
-          <Input
-            id="url"
-            required
-            inputMode="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="yourbusiness.com"
-            className={fieldClass}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="description">What does your business do?</Label>
-          <textarea
-            id="description"
-            required
-            rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g. a marketplace to hire vetted creative freelancers for design, video and photography"
-            className={textareaClass}
-          />
-          <p className="text-xs text-muted-foreground">
-            The clearer this is, the better the searches we test you on.
-          </p>
-        </div>
-
-        <Button
-          type="submit"
-          className="h-11 w-full rounded-full text-sm font-semibold"
-        >
-          Analyse my site
-        </Button>
-      </form>
-    </div>
+    </main>
   );
 }
