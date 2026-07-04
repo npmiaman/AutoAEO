@@ -84,7 +84,6 @@ export function ScanReport({
   const c = detail.competitors;
   const dx = detail.diagnosis;
   const pct = total ? Math.round((appeared / total) * 100) : 0;
-  const gaps = c.focus.ourGaps;
   // Openings with no strong rival, ranked by search demand so the top few are
   // genuinely where we have the most opportunity to win.
   const opportunities: Opportunity[] = [...c.focus.quickWins]
@@ -117,7 +116,7 @@ export function ScanReport({
   return (
     <div className="space-y-6">
       {/* ── KPI row — the at-a-glance headline ──────────────────── */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Stat
           label="AI visibility"
           value={`${appeared}/${total}`}
@@ -128,16 +127,6 @@ export function ScanReport({
           label="Opportunities"
           value={opportunities.length}
           sub="openings with no strong rival"
-        />
-        <Stat
-          label="Missing"
-          value={gaps.length}
-          sub="searches you don't appear on"
-        />
-        <Stat
-          label="Competitors"
-          value={c.competitors.length}
-          sub="brands ranking on your searches"
         />
       </div>
 
