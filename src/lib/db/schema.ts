@@ -294,6 +294,22 @@ export const searchCache = sqliteTable("search_cache", {
     .default(sql`(unixepoch())`),
 });
 
+// Personal access token for the Pigeon CLI. Minted from the logged-in web app
+// and pasted into `pigeon login`; scopes CLI/API access to that user's account
+// (all their workspaces), unlike the per-site apiKey on `site`.
+export const cliToken = sqliteTable("cli_token", {
+  id: text("id").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(), // "pgn_..." shown once
+  name: text("name"), // optional label (e.g. machine / repo)
+  createdAt: integer("createdAt", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  lastUsedAt: integer("lastUsedAt", { mode: "timestamp" }),
+});
+
 // A single proposed change inside an agent run. User reviews/approves these.
 export const changeProposal = sqliteTable("change_proposal", {
   id: text("id").primaryKey(),

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { userWorkspaces } from "@/lib/agent/loop/provision";
 import { Card, CardContent } from "@/components/ui/card";
+import { CliConnect } from "./cli-connect";
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
@@ -35,6 +36,8 @@ export default async function ProfilePage() {
           <Field label="Workspaces" value={String(workspaces.length)} />
         </CardContent>
       </Card>
+
+      <CliConnect />
     </div>
   );
 }

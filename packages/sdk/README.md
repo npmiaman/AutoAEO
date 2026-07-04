@@ -1,68 +1,50 @@
-# @pigeon/sdk
+# @pigeon/sdk — install Pigeon in your codebase
 
-**Make your site show up in AI search (ChatGPT, Perplexity, Gemini) — for any site, not just Shopify.**
+Pigeon measures where your site shows up in AI search (ChatGPT / Perplexity /
+Gemini), figures out what to fix, and **generates the concrete fixes**. This
+package lets Pigeon apply those fixes _inside your codebase_.
 
-Pigeon's agent continuously analyzes your site against real AI-assistant searches, figures out where you're invisible and who's beating you, and generates the fixes (schema.org JSON-LD, better meta, an `llms.txt`). This SDK applies those fixes to your site — at **runtime** (SDK) or **build time** (CLI). You write no optimization code; the agent does the thinking.
-
-## Install
+## Quick start
 
 ```bash
-npm install @pigeon/sdk
+npm i -g @pigeon/sdk
+
+pigeon login     # log into your Pigeon account (paste a CLI token)
+pigeon link      # pick which workspace this repo belongs to
+pigeon apply     # write the generated fixes into your code
 ```
 
-Get an API key by connecting your site at [app.pigeon.com](https://app.pigeon.com).
+- **`pigeon login`** opens your account, where you generate a one-time CLI token
+  (Profile → “Connect your codebase”), and pastes it in. Creds are stored in
+  `~/.pigeon/config.json`.
+- **`pigeon link`** lists your workspaces and links this repo to one
+  (`.pigeon.json`). If you only have one, it links automatically.
+- **`pigeon apply`** pulls the latest fix pack for the linked workspace and
+  writes each artifact into `./pigeon/` (schema `.html`, content/steps `.md`),
+  with a `README.md` explaining where each goes. It also **auto-injects** the
+  Organization JSON-LD into a static `index.html` `<head>` when it finds one.
+- **`pigeon status`** shows who you’re logged in as and the linked workspace.
 
-## Runtime (Next.js App Router)
+Point the CLI at a self-hosted / local server with `--base http://localhost:3000`
+(or `PIGEON_BASE`).
 
-```ts
-// lib/aeo.ts
-import { createPigeon } from "@pigeon/sdk";
-export const aeo = createPigeon({ apiKey: process.env.PIGEON_KEY! });
-```
+## Runtime SDK (optional)
 
-```tsx
-// app/page.tsx
-import { pigeonMetadata, PigeonJsonLd } from "@pigeon/sdk/next";
-import { aeo } from "@/lib/aeo";
-
-export async function generateMetadata() {
-  return pigeonMetadata(aeo, "/"); // AI-optimized <title>/<meta description>
-}
-
-export default async function Page() {
-  return (
-    <>
-      {await PigeonJsonLd({ client: aeo, path: "/" })} {/* injects JSON-LD */}
-      <main>…</main>
-    </>
-  );
-}
-```
-
-```ts
-// app/llms.txt/route.ts
-import { llmsTxtResponse } from "@pigeon/sdk/next";
-import { aeo } from "@/lib/aeo";
-export const GET = () => llmsTxtResponse(aeo);
-```
-
-## Build time (any static / JAMstack site)
-
-```jsonc
-// package.json
-{ "scripts": { "prebuild": "pigeon build --key $PIGEON_KEY" } }
-```
-
-Writes `public/llms.txt` and `public/pigeon-artifacts.json` (per-route meta + JSON-LD) into your build output for your framework to inline.
-
-## Framework-agnostic core
+Serve the artifacts Pigeon generated at runtime, framework-agnostic:
 
 ```ts
 import { createPigeon, renderJsonLd } from "@pigeon/sdk";
-const aeo = createPigeon({ apiKey: "…" });
-const route = await aeo.getRoute(req.path);
-res.setHeader("…"); // set <title>/<meta> from route.title / route.description
-html = html.replace("</head>", renderJsonLd(route) + "</head>");
+
+const pigeon = createPigeon({ apiKey: process.env.PIGEON_KEY! });
+const route = await pigeon.getRoute("/pricing");
+// inject renderJsonLd(route) into your <head>
 ```
 
-Fails safe: a network hiccup never breaks your site — it serves stale artifacts or nothing.
+## Legacy build step
+
+```bash
+pigeon build --key $PIGEON_KEY --out public
+# writes public/llms.txt + public/pigeon-artifacts.json
+```
+
+MIT
