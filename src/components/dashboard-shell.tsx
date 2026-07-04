@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Check, ChevronsUpDown, Plus, User as UserIcon } from "lucide-react";
+import {
+  BarChart3,
+  Bot,
+  Check,
+  ChevronsUpDown,
+  Plus,
+  User as UserIcon,
+} from "lucide-react";
 import PixelPigeon from "@/components/PixelPigeon";
 import { Button } from "@/components/ui/button";
 import {
@@ -128,7 +135,53 @@ export function DashboardShell({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">{children}</main>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-28 pt-10">
+        {children}
+      </main>
+
+      {current && <AppBar workspaceId={current.id} pathname={pathname} />}
     </div>
+  );
+}
+
+// Mobile-app-style bottom bar: a floating pill with the two main views.
+function AppBar({
+  workspaceId,
+  pathname,
+}: {
+  workspaceId: string;
+  pathname: string;
+}) {
+  const base = `/sites/${workspaceId}`;
+  const tabs = [
+    { href: base, label: "Analytics", Icon: BarChart3, active: pathname === base },
+    {
+      href: `${base}/agents`,
+      label: "Agents",
+      Icon: Bot,
+      active: pathname.startsWith(`${base}/agents`),
+    },
+  ];
+  return (
+    <nav className="fixed inset-x-0 bottom-5 z-40 flex justify-center px-4">
+      <div className="flex items-center gap-1 rounded-full border bg-background/90 p-1 shadow-lg backdrop-blur supports-backdrop-filter:bg-background/70">
+        {tabs.map(({ href, label, Icon, active }) => (
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={
+              "flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium transition-colors " +
+              (active
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground")
+            }
+          >
+            <Icon className="size-4" />
+            {label}
+          </Link>
+        ))}
+      </div>
+    </nav>
   );
 }
