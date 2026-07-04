@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -73,12 +74,14 @@ export function DashboardShell({
               }
             />
             <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>
-                <div className="text-sm font-medium">{user.name}</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {user.email}
-                </div>
-              </DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>
+                  <div className="text-sm font-medium">{user.name}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {user.email}
+                  </div>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
 
               <DropdownMenuSeparator />
               <DropdownMenuItem render={<Link href="/profile" />}>
@@ -87,34 +90,36 @@ export function DashboardShell({
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                Switch workspace
-              </DropdownMenuLabel>
-              {workspaces.map((w) => (
-                <DropdownMenuItem
-                  key={w.id}
-                  render={<Link href={`/sites/${w.id}`} />}
-                >
-                  <Check
-                    className={
-                      "size-4 " +
-                      (w.id === current?.id
-                        ? "text-foreground"
-                        : "text-transparent")
-                    }
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm">{w.name}</span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {w.primaryDomain}
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Switch workspace
+                </DropdownMenuLabel>
+                {workspaces.map((w) => (
+                  <DropdownMenuItem
+                    key={w.id}
+                    render={<Link href={`/sites/${w.id}`} />}
+                  >
+                    <Check
+                      className={
+                        "size-4 " +
+                        (w.id === current?.id
+                          ? "text-foreground"
+                          : "text-transparent")
+                      }
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm">{w.name}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {w.primaryDomain}
+                      </span>
                     </span>
-                  </span>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuItem render={<Link href="/onboarding" />}>
+                  <Plus className="size-4 text-muted-foreground" />
+                  Create new workspace
                 </DropdownMenuItem>
-              ))}
-              <DropdownMenuItem render={<Link href="/onboarding" />}>
-                <Plus className="size-4 text-muted-foreground" />
-                Create new workspace
-              </DropdownMenuItem>
+              </DropdownMenuGroup>
 
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onSignOut}>Sign out</DropdownMenuItem>
