@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/lib/db";
 import { shop as shopTable, site as siteTable } from "@/lib/db/schema";
@@ -113,6 +113,23 @@ export async function userGenericSiteId(userId: string): Promise<string | null> 
     )
     .limit(1);
   return row?.id ?? null;
+}
+
+/** A user's workspaces (one site each), newest first — for the switcher. */
+export async function userWorkspaces(
+  userId: string,
+): Promise<Array<{ id: string; name: string; primaryDomain: string }>> {
+  return db
+    .select({
+      id: siteTable.id,
+      name: siteTable.name,
+      primaryDomain: siteTable.primaryDomain,
+    })
+    .from(siteTable)
+    .where(
+      and(eq(siteTable.userId, userId), eq(siteTable.platform, "generic")),
+    )
+    .orderBy(desc(siteTable.createdAt));
 }
 
 /** All sites whose loop is due to run (not paused). */

@@ -3,10 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import {
-  provisionGenericSite,
-  userGenericSiteId,
-} from "@/lib/agent/loop/provision";
+import { provisionGenericSite } from "@/lib/agent/loop/provision";
 import { verifySiteReachable } from "@/lib/agent/site/crawl";
 import { startScan } from "@/lib/agent/measurement/batch-scan";
 
@@ -14,9 +11,10 @@ export type OnboardingResult =
   | { ok: true; siteId: string }
   | { ok: false; error: string };
 
-// Provision the user's ONE website and run its first (live) scan. Called from
-// the onboarding loading screen. Idempotent: if the user already has a site we
-// return it untouched — their existing data is never overwritten.
+// Provision a workspace (one website) and run its first (live) scan. Called from
+// the onboarding loading screen — also the "create new workspace" entry point.
+// provisionGenericSite dedupes per (user, domain), so re-adding the same site
+// returns the existing one untouched rather than clobbering its data.
 export async function completeOnboarding(input: {
   url: string;
   name: string;
@@ -24,10 +22,6 @@ export async function completeOnboarding(input: {
 }): Promise<OnboardingResult> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/signin");
-
-  // One website per user — never clobber an existing one.
-  const existing = await userGenericSiteId(session.user.id);
-  if (existing) return { ok: true, siteId: existing };
 
   const raw = input.url.trim();
   if (!raw) return { ok: false, error: "Enter your website address." };
