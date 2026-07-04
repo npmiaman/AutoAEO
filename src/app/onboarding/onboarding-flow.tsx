@@ -43,8 +43,10 @@ function LoadingScreen() {
   );
 }
 
-const fieldClass =
-  "h-11 rounded-xl border-transparent bg-muted/60 px-4 text-sm shadow-none placeholder:text-muted-foreground/70 focus-visible:bg-background";
+const fieldBase =
+  "rounded-xl border-transparent bg-muted/60 px-4 text-sm shadow-none placeholder:text-muted-foreground/70 focus-visible:bg-background";
+const fieldClass = `h-11 ${fieldBase}`;
+const textareaClass = `${fieldBase} min-h-24 resize-none py-3 leading-relaxed`;
 
 export function OnboardingFlow({ defaultName }: { defaultName?: string }) {
   const router = useRouter();
@@ -120,7 +122,7 @@ export function OnboardingFlow({ defaultName }: { defaultName?: string }) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="e.g. a marketplace to hire vetted creative freelancers for design, video and photography"
-            className={`${fieldClass} h-auto resize-none py-3 leading-relaxed`}
+            className={textareaClass}
           />
           <p className="text-xs text-muted-foreground">
             The clearer this is, the better the searches we test you on.
