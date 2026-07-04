@@ -19,10 +19,18 @@ pigeon apply     # write the generated fixes into your code
   `~/.pigeon/config.json`.
 - **`pigeon link`** lists your workspaces and links this repo to one
   (`.pigeon.json`). If you only have one, it links automatically.
-- **`pigeon apply`** pulls the latest fix pack for the linked workspace and
-  writes each artifact into `./pigeon/` (schema `.html`, content/steps `.md`),
-  with a `README.md` explaining where each goes. It also **auto-injects** the
-  Organization JSON-LD into a static `index.html` `<head>` when it finds one.
+- **`pigeon apply`** pulls the latest fix pack and is **framework-aware**. It
+  detects your stack and applies the fixes into the real code:
+  - **Next.js (App Router)** — adds a `PigeonSchema` component and wires it into
+    your `app/layout` `<body>`; scaffolds `app/faq/page.tsx` (visible Q&A +
+    FAQPage schema).
+  - **Astro** — injects `is:inline` JSON-LD into your layout `<head>`; scaffolds
+    `src/pages/faq.astro`.
+  - **Static `index.html`** — injects into `<head>`; writes `faq.html`.
+  - Any other stack — every artifact is written to `./pigeon/` with a guide.
+  It then **opens the changes on a `pigeon/aeo-fixes` branch** (and a PR via `gh`
+  if available) so you review before merging. Everything also lands in
+  `./pigeon/` for reference.
 - **`pigeon status`** shows who you’re logged in as and the linked workspace.
 
 Point the CLI at a self-hosted / local server with `--base http://localhost:3000`
