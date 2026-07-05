@@ -1,9 +1,9 @@
 {
-  "name": "@pigeon/sdk",
+  "name": "pigeon-aeo",
   "version": "0.1.0",
-  "description": "Make your site show up in AI search. Drop-in AEO/SEO for any site — injects the schema, meta, and llms.txt Pigeon's agent generates for you.",
+  "description": "Install Pigeon in your codebase. Logs into your Pigeon account, picks a workspace, and applies the AEO/GEO fixes (schema, FAQ pages, atomic facts) it generated — framework-aware, on a review branch.",
   "type": "module",
-  "main": "./src/index.js",
+  "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
@@ -13,8 +13,32 @@
     "pigeon": "./bin/cli.mjs"
   },
   "files": ["src", "bin", "README.md"],
-  "keywords": ["aeo", "geo", "seo", "ai-search", "llms.txt", "schema.org", "chatgpt"],
+  "keywords": [
+    "aeo",
+    "geo",
+    "seo",
+    "ai-search",
+    "llms.txt",
+    "schema.org",
+    "chatgpt",
+    "perplexity"
+  ],
   "license": "MIT",
+  "homepage": "https://github.com/npmiaman/AutoAEO/tree/main/packages/sdk#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/npmiaman/AutoAEO.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/npmiaman/AutoAEO/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependenciesMeta": {
     "next": { "optional": true }
   }
