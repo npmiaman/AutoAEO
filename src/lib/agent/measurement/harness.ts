@@ -21,6 +21,7 @@ import { fetchQueryVolumes } from "@/lib/agent/volume";
 import { getCachedResults, putCachedResult } from "./search-cache";
 import { runAeoAudit, auditSummary } from "./aeo-audit";
 import { generateFixPack } from "./fixpack";
+import { logActivity } from "./activity";
 
 // ─────────────────────────────────────────────────────────────────────
 // Visibility scan ("autoresearch"). Once per day per site, batched:
@@ -152,6 +153,12 @@ export async function runVisibilityScan(input: ScanInput): Promise<ScanResult> {
   ).slice(0, MAX_SEARCHES);
   if (searches.length === 0) throw new Error("No searches to run.");
 
+  const say = (m: string, k: "start" | "info" | "done" = "info") =>
+    input.persist !== false ? logActivity(input.siteId, m, k) : undefined;
+  await say(
+    `Running ${searches.length} real AI-search queries across the assistants…`,
+  );
+
   // Every (engine × search) is one grounded call (sync path). Cache-backed: a
   // fresh cached result is reused (so a stopped scan resumes instead of redoing
   // completed calls), and every fresh call is written back as it lands.
@@ -215,6 +222,10 @@ export async function finalizeScan(args: {
     named: scored.filter((o) => o.position !== null).length,
   };
 
+  const say = (m: string, k: "start" | "info" | "done" = "info") =>
+    input.persist !== false ? logActivity(input.siteId, m, k) : undefined;
+  await say("Reading who ranks on each of your searches…");
+
   // 2. Competitive intelligence.
   const competitors = buildCompetitiveMap(
     outcomes,
@@ -229,6 +240,9 @@ export async function finalizeScan(args: {
     input.business,
   );
   applyStrength(competitors, strong);
+  await say(
+    `Mapped ${competitors.competitors.length} competitor${competitors.competitors.length === 1 ? "" : "s"} across your searches.`,
+  );
 
   if (input.withVolume !== false) {
     const demand = await fetchQueryVolumes(
@@ -249,9 +263,14 @@ export async function finalizeScan(args: {
 
   // 3. Technical AEO/GEO audit (Phase 0–2 checks straight from the site), so the
   // diagnosis can lead with real blockers (blocked crawler, no SSR, no schema).
+  await say("Crawling your pages to check AI-readiness…");
   const audit = await runAeoAudit(input.primaryDomain);
+  await say(
+    `Audited ${audit.pagesScanned} page${audit.pagesScanned === 1 ? "" : "s"} — ${audit.passed}/${audit.total} readiness checks passing.`,
+  );
 
   // 4. Diagnose — grounded in both the search outcomes and the audit.
+  await say("Working out what to fix and where to win…");
   const diagnosis = await diagnose({
     brandName: input.brandName,
     domain: input.primaryDomain,
@@ -274,6 +293,10 @@ export async function finalizeScan(args: {
     audit,
     topQueries: targetQueries,
   });
+  if (fixPack.length)
+    await say(
+      `Generated ${fixPack.length} ready-to-apply fix${fixPack.length === 1 ? "" : "es"} for you.`,
+    );
 
   // 4. Persist one measurement row.
   let measurementId: string | null = null;
@@ -297,6 +320,10 @@ export async function finalizeScan(args: {
         fixPack,
       }),
     });
+    await say(
+      `Scan complete — you show up on ${appearedQueries.length}/${scored.length} AI searches.`,
+      "done",
+    );
   }
 
   return {

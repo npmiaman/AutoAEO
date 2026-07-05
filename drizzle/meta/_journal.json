@@ -43,6 +43,13 @@
       "when": 1783148168081,
       "tag": "0005_cool_rumiko_fujikawa",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1783242412765,
+      "tag": "0006_brown_human_robot",
+      "breakpoints": true
     }
   ]
 }

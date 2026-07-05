@@ -6,8 +6,10 @@ import { db } from "@/lib/db";
 import { measurement, site as siteTable } from "@/lib/db/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { runningScanJob } from "@/lib/agent/measurement/batch-scan";
+import { recentActivity } from "@/lib/agent/measurement/activity";
 import { ScanReport, type ScanDetail } from "./scan-report";
 import { ScanPoller } from "./scan-poller";
+import { PigeonTerminal } from "./pigeon-terminal";
 
 export default async function SitePage({
   params,
@@ -33,6 +35,7 @@ export default async function SitePage({
     .limit(1);
 
   const scanning = !!(await runningScanJob(siteId));
+  const activityLines = await recentActivity(siteId);
 
   let detail: ScanDetail | null = null;
   if (latest?.detailJson) {
@@ -47,25 +50,17 @@ export default async function SitePage({
     <div className="space-y-8">
       {scanning && <ScanPoller siteId={siteId} />}
 
-      <div>
-        <h1 className="font-heading text-3xl tracking-tight">{site.name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+      <div className="space-y-2">
+        <PigeonTerminal
+          siteId={siteId}
+          siteName={site.name}
+          initialLines={activityLines}
+          initialScanning={scanning}
+        />
+        <p className="px-1 text-sm text-muted-foreground">
           {site.primaryDomain}
         </p>
       </div>
-
-      {scanning && (
-        <Card className="border-dashed">
-          <CardContent className="flex items-center gap-3 py-4">
-            <span className="size-2 animate-pulse rounded-full bg-foreground" />
-            <p className="text-sm text-muted-foreground">
-              Scanning in the background — running all searches as one batch.
-              This usually takes a few minutes; the results appear here
-              automatically.
-            </p>
-          </CardContent>
-        </Card>
-      )}
 
       {detail ? (
         <ScanReport

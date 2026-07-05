@@ -294,6 +294,21 @@ export const searchCache = sqliteTable("search_cache", {
     .default(sql`(unixepoch())`),
 });
 
+// Live activity feed — the scan pipeline writes human-readable lines here as it
+// works ("Crawling your pages…", "Generated 5 fixes"). The dashboard terminal
+// polls these so the user sees what Pigeon is doing in real time.
+export const activity = sqliteTable("activity", {
+  id: text("id").primaryKey(),
+  siteId: text("siteId")
+    .notNull()
+    .references(() => site.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull().default("info"), // start | info | done | error
+  message: text("message").notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
 // Personal access token for the Pigeon CLI. Minted from the logged-in web app
 // and pasted into `pigeon login`; scopes CLI/API access to that user's account
 // (all their workspaces), unlike the per-site apiKey on `site`.

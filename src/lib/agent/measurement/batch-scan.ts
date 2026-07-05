@@ -8,6 +8,7 @@ import { generateSearchIdeas } from "./searches";
 import { submitSearchBatch, retrieveSearchBatch } from "./engines/openai-batch";
 import { finalizeScan, runVisibilityScan } from "./harness";
 import { getCachedResults, putCachedResult } from "./search-cache";
+import { logActivity } from "./activity";
 import type { EngineQueryResult } from "./engines/types";
 
 // If a scan already ran this recently, reuse it instead of scanning again.
@@ -80,6 +81,14 @@ export async function startScan(
     .where(eq(siteTable.id, siteId))
     .limit(1);
   if (!s) throw new Error(`Site not found: ${siteId}`);
+
+  await logActivity(
+    siteId,
+    last
+      ? "Starting a fresh scan of your site…"
+      : "Starting my deep dive — crawling all your pages…",
+    "start",
+  );
 
   // Resolve the search set ONCE and reuse it, so a resumed scan hits the cache.
   const searches = await resolveSearchSet(s);
