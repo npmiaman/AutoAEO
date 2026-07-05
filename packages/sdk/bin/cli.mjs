@@ -16,7 +16,7 @@ import { homedir } from "node:os";
 import { createInterface } from "node:readline";
 import { spawn, spawnSync } from "node:child_process";
 
-const DEFAULT_BASE = process.env.PIGEON_BASE || "https://app.pigeon.com";
+const DEFAULT_BASE = process.env.PIGEON_BASE || "https://pigeon-ten-ochre.vercel.app";
 const CONFIG_DIR = join(homedir(), ".pigeon");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 const LINK_FILE = join(process.cwd(), ".pigeon.json");
