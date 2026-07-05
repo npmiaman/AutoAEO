@@ -9,7 +9,7 @@ import { runningScanJob } from "@/lib/agent/measurement/batch-scan";
 
 // Feed for the dashboard terminal: what Pigeon is doing + whether a scan runs.
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ siteId: string }> },
 ) {
   const { siteId } = await params;
@@ -25,11 +25,15 @@ export async function GET(
   if (!site)
     return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  let lines = await recentActivity(siteId);
+  const limit = Math.min(
+    500,
+    Math.max(20, Number(new URL(req.url).searchParams.get("limit")) || 60),
+  );
+  let lines = await recentActivity(siteId, limit);
   if (lines.length === 0) lines = await synthesize(siteId);
 
   const scanning = !!(await runningScanJob(siteId));
-  return NextResponse.json({ lines, scanning });
+  return NextResponse.json({ lines, scanning, hasMore: lines.length >= limit });
 }
 
 // For sites scanned before the activity feed existed: derive a short recap from
