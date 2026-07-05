@@ -33,7 +33,7 @@ export function CliConnect() {
         </div>
 
         <pre className="overflow-x-auto rounded-md bg-muted/60 p-3 text-xs leading-relaxed">
-          <code>{`npm i -g @pigeon/sdk
+          <code>{`npm i -g pigeon-aeo
 pigeon login     # paste the token below
 pigeon link      # pick your workspace
 pigeon apply     # write the fixes into your codebase`}</code>
