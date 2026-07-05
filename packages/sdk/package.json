@@ -1,6 +1,6 @@
 {
   "name": "pigeon-aeo",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Install Pigeon in your codebase. Logs into your Pigeon account, picks a workspace, and applies the AEO/GEO fixes (schema, FAQ pages, atomic facts) it generated — framework-aware, on a review branch.",
   "type": "module",
   "main": "./src/index.ts",
@@ -12,7 +12,11 @@
   "bin": {
     "pigeon": "./bin/cli.mjs"
   },
-  "files": ["src", "bin", "README.md"],
+  "files": [
+    "src",
+    "bin",
+    "README.md"
+  ],
   "keywords": [
     "aeo",
     "geo",
@@ -40,6 +44,8 @@
     "access": "public"
   },
   "peerDependenciesMeta": {
-    "next": { "optional": true }
+    "next": {
+      "optional": true
+    }
   }
 }
